@@ -1,22 +1,49 @@
+const dotenv = require('dotenv');
+dotenv.config();
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
-    host: 'localhost',
-    port: 25, // Default SMTP port for hMailServer
-    secure: false, // Set to false since hMailServer does not use SSL/TLS by default
+    host: process.env.SMTP_Host,
+    port: process.env.SMTP_PORT, 
+    secure: false, 
     auth: {
-        user: 'admin@hmail.com',
-        pass: 'P@ssw0rd!'
+        user: process.env.SMTP_Email,
+        pass: process.env.SMTP_PASSWORD
     }
 });
 
-const sendConfirmationEmail = async (email, token) => {
-    const confirmationLink = `http://your-website.com/confirm/${token}`;
+const sendConfirmationEmail = async (req, token) => {
+    const confirmationLink = `${req.protocol}://${req.get('host')}/auth/confirm/${token}`;
     const mailOptions = {
-        from: 'admin@hmail.com',
-        to: 'jony@hmail.com',
-        subject: 'Email Confirmation',
-        text: `Please confirm your email by clicking the following link: ${confirmationLink}`
+        from: process.env.SMTP_Email,
+        to: req.body.email,
+        subject: 'Verify email address for leadsworker.com',
+        html: `Welcome to Leadsworker! <br>
+
+        Your Leadsworker account has been created successfully<br><br>
+        Click the activation link below to verify your email address<br><br>
+        
+       <a href="${confirmationLink}">${confirmationLink}</a><br><br>
+        
+        If the above verification link does not work, please copy and paste the entire link into your browser address bar.<br>
+        
+        Kindly note that this verification link will expire after 24 hours. You may signup again after the link expires.<br>
+        
+        ---------------------------------------------------<br>
+        <b>Email:</b> ${req.body.email}<br>
+        <b>Password:</b> ****** (hidden for privacy)<br>
+        ---------------------------------------------------<br>
+        <br><br>
+        If this was not you, please disregard; someone may have mistyped their email address.<br><br>
+        <br>
+        Regards,
+        Leadsworker.com
+        
+        <br><br>
+        ---------------------------------------------------
+        <br><br>
+        This is an automated message from Leadsworker
+        Do not reply to this email.`
     };
 
     transporter.sendMail(mailOptions, (error, info) => {

@@ -25,6 +25,14 @@ const TemporaryUser = sequelize.define('TemporaryUser', {
     type: DataTypes.STRING,
     allowNull: false
   },
+  country: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  gender: {
+    type: DataTypes.STRING,
+    allowNull: false
+  },
   status: {
     type: DataTypes.STRING,
     allowNull: false

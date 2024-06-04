@@ -1,15 +1,13 @@
 const jwt = require('jsonwebtoken');
+const User = require('../models/User');
 
-const authCheck = (req, res, next)=>{
+const authCheck = async (req, res, next)=>{
     try{
     const decoted = jwt.verify(req.body.token, process.env.JWT_SECRET);
-    const {firstName, lastName, userName, email, type} = decoted;
-    req.user_decoted_Data = {firstName, lastName, userName, email, type};
-    req.lastName = lastName;
-    req.userName = userName;
-    req.email = email;
-    req.type = type;
-
+    const {userName} = decoted;
+    const user = await User.findOne({ where: { userName: userName }});
+    await user.update({last_seen: new Date()});
+    req.userData = user;
     next();
     }
     catch{

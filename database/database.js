@@ -1,9 +1,12 @@
+const dotenv = require('dotenv');
+dotenv.config();
 const { Sequelize } = require('sequelize');
 
 // Create a new instance of Sequelize
-const sequelize = new Sequelize('leadworks', 'root', '', {
-  host: 'localhost',  // Replace with your host
-  dialect: 'mysql'
+const sequelize = new Sequelize(process.env.DATABASE_Name, process.env.DATABASE_User, process.env.DATABASE_PASSWORD, {
+  host: process.env.DATABASE_Host,
+  dialect: 'mysql',
+  logging: false
 });
 
 // Test the connection

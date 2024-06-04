@@ -2,10 +2,17 @@ const express = require('express');
 const path = require('path');
 const dotenv = require('dotenv');
 var cors = require('cors');
-const userHandelar = require('./routeHandelar/userAuth');
+const authHandelar = require('./routeHandelar/userAuth');
+const profileHandelar = require('./routeHandelar/profile');
+const depositPayHandelar = require('./routeHandelar/deposit-pay');
+const withdrawPayHandelar = require('./routeHandelar/withdraw-pay');
+const depositRequestHandelar = require('./routeHandelar/deposit-request');
+const withdrawRequestHandelar = require('./routeHandelar/withdraw-request');
+const notifyHandelar = require('./routeHandelar/notify');
+const jobHandelar = require('./routeHandelar/jobs');
+const taskHandelar = require('./routeHandelar/task');
 
 const sequelize = require('./database/database');
-const User = require('./models/User');
 
   
 //App initialization
@@ -14,6 +21,7 @@ const app = express();
 dotenv.config();
 app.use(cors());
 app.use(express.json());
+app.use('/uploads', express.static('uploads'));
 app.use(express.static(path.join(__dirname, 'build')));
 
 
@@ -29,69 +37,17 @@ sequelize.sync(/*{ alter: true }*/)
 
 
 
-  // Define routes
-app.post('/users', async (req, res) => {
-    try {
-      const user = await User.create(req.body);
-      res.status(201).json(user);
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
-  });
-
-
-  app.get('/users', async (req, res) => {
-    try {
-      const users = await User.findAll();
-      res.status(200).json(users);
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
-  });
-
-  app.get('/users/:id', async (req, res) => {
-    try {
-      const user = await User.findOne({ where: { email: 'hre@gmail.com' } });
-      if (user) {
-        res.status(200).json(user);
-      } else {
-        res.status(404).json({ error: 'User not found' });
-      }
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
-  });
-
-  app.put('/users/:id', async (req, res) => {
-    try {
-      const user = await User.findByPk(req.params.id);
-      if (user) {
-        await user.update(req.body);
-        res.status(200).json(user);
-      } else {
-        res.status(404).json({ error: 'User not found' });
-      }
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
-  });
-  
-  app.delete('/users/:id', async (req, res) => {
-    try {
-      const user = await User.findByPk(req.params.id);
-      if (user) {
-        await user.destroy();
-        res.status(204).end();
-      } else {
-        res.status(404).json({ error: 'User not found' });
-      }
-    } catch (error) {
-      res.status(400).json({ error: error.message });
-    }
-  });
 
 //App Routes
-app.use('/user', userHandelar);
+app.use('/auth', authHandelar);
+app.use('/profile', profileHandelar);
+app.use('/deposit-pay', depositPayHandelar);
+app.use('/withdraw-pay', withdrawPayHandelar);
+app.use('/deposit-request', depositRequestHandelar);
+app.use('/withdraw-request', withdrawRequestHandelar);
+app.use('/notify', notifyHandelar);
+app.use('/job', jobHandelar);
+app.use('/task', taskHandelar);
 app.get('*', (req, res) => {res.sendFile(path.join(__dirname, 'build', 'index.html'));});
 
 

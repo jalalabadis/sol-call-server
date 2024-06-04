@@ -10,8 +10,7 @@ const checkValidEmail = require('../middlewares/checkValidEmail');
 const passwordhashing = require('../middlewares/passwordhashing');
 const bcrypt = require('bcrypt');
 const sendConfirmationEmail = require('../middlewares/emailSend');
-
-
+const generateSecretKey = require('../middlewares/generateSecretKey');
 
 
 
@@ -20,7 +19,8 @@ router.post('/singup', async (req, res)=>{
   try{
 const eexistingUserEmail = await User.findOne({ where: { email: req.body.email } });
 const existingUserName = await User.findOne({ where: { userName: req.body.userName } });
-const pendingUser = await TemporaryUser.findOne({ where: { email:req.body.email} });
+const pendingUserEmail = await TemporaryUser.findOne({ where: { email:req.body.email} });
+const pendingUserName = await TemporaryUser.findOne({ where: { userName:req.body.userName} });
 const randomCode = generateRandomCode();
 const emailformet = checkValidEmail(req.body.email);
 const passwords = await passwordhashing(req.body.pass);
@@ -30,6 +30,8 @@ const userJsonData = {
   userName: req.body.userName,
   email: req.body.email,
   password: passwords,
+  country: req.body.country,
+  gender: req.body.gender,
   status: "pending",
   referral: req.body.referral,
   ip: req.body.ip,
@@ -38,30 +40,38 @@ const userJsonData = {
 
 if (eexistingUserEmail) {
       // Email found
-      res.send("Email alredy Register");
+      res.status(200).json({Status: false, Message:"Email already Register"});
   } else if (existingUserName) {
       // Username found
-      res.send("Username match");
+      res.status(200).json({Status: false, Message:"Username already exist"});
   }
-  else if (pendingUser) {
+  else if (pendingUserEmail) {
     // Username found
-    await sendConfirmationEmail(req.body.email, randomCode);
-    res.send("pending confirmation.");
+    res.status(200).json({Status: false, Message:"Confirmation email already sent, pending confirmation."});
+}
+else if (pendingUserName) {
+  // Username found
+  res.status(200).json({Status: false, Message:"UserName already exist"});
 }
   else if (req.body.pass.length<6) {
     // Username found
-    res.send("Password To Short");
+    res.status(200).json({Status: false, Message:"Password To Short"});
 }
 else if (!emailformet) {
   // Username found
-  res.send("Invelid Email");
+  res.status(200).json({Status: false, Message:"Invelid Email"});
 }
   else {
     // Store user data in temporary table
     await TemporaryUser.create(userJsonData);
-    // Send confirmation email
-   await sendConfirmationEmail(req.body.email, randomCode);
-    res.status(200).json({ message: 'Registration successful. Please check your email to confirm your account.' });
+    sendConfirmationEmail(req, randomCode)
+    .then(() => {
+      res.status(200).json({ Status: true, Message: 'Registration successful. Please check your email to confirm your account.' });
+    })
+    .catch((err) => {
+      console.error('Failed to send confirmation email:', err);
+      res.status(500).json({ Status: false, Message: 'Failed to send confirmation email. Please try again later.' });
+    });
   }
   
   }
@@ -71,44 +81,101 @@ else if (!emailformet) {
   }
   });
 
+/////confirm
+router.get('/confirm/:token', async (req, res) => {
+  try{
+    const { token } = req.params;
+
+    // Find user by token
+    const tempUser = await TemporaryUser.findOne({ where: { token } });
+
+    if (!tempUser) {
+      res.redirect(`${process.env.EXPRESS_APP_CLIENT}/signup?success=false`);
+    }
+
+    // Move data to the permanent users table
+    await User.create({
+      firstName: tempUser.firstName,
+      lastName: tempUser.lastName,
+      userName: tempUser.userName,
+      email: tempUser.email,
+      password: tempUser.password,
+      gender: tempUser.gender,
+      country: tempUser.country,
+      avatar: "avater.jpg",
+      ip: tempUser.ip,
+      SecretKey: generateSecretKey(),
+      ///Condition
+      type: "user",
+      status: "active",
+      last_seen: new Date(),
+      ///affiliate
+      referral: tempUser.referral,
+      invite:generateRandomCode(),
+      //money
+      totalEarned:0,
+      earned: 0,
+      pending:0,
+      reserved:0,
+      reward:0,
+      // Micro job Worker
+      tasksDone:0,
+      satisfied:0,
+      notSatisfied:0,
+      jobsStarted:0,
+      tasksPaid:0
+
+    });
+
+    // Delete temporary user
+    await tempUser.destroy();
+
+    res.redirect(`${process.env.EXPRESS_APP_CLIENT}/login?success=true`);
+  }
+catch(err){
+      console.log(err)
+      res.status(500).send('Authorizatsadf');
+    }
+});
+ 
 
 //////Login User
 router.post('/login', async (req, res) => {
   try {
-    const enteredPassword = req.body.password;
-    const user = await User.findOne({ email: req.body.email });
+    const enteredPassword = req.body.pass;
+    const user = await User.findOne({ where: { email: req.body.email }});
 
     if (!user) {
-      res.send("Email not found");
+      res.status(200).json({Status: false, Message:"Email not found"});
       return;
     }
 
     const isPasswordValid = await bcrypt.compare(enteredPassword, user.password);
 
     if (isPasswordValid) {
-      if (user.status === "Active") {
-        const userDataObject = user.toObject();
+      if (user.status === "active") {
+        const userDataObject = {userName:user.userName};
         const token = jwt.sign(userDataObject, process.env.JWT_SECRET, { expiresIn: '7d' });
-        res.json({ type: user.type, token: token });
+        res.status(200).json({Status: true, token });
       } else {
-        res.send("Your account is inactive");
+        res.status(200).json({Status: false, Message:"Your account is inactive"});
       }
     } else {
-      res.send("Incorrect password");
+      res.status(200).json({Status: false, Message:"Incorrect password"});
     }
   } catch (err) {
     console.log(err);
-    res.status(500).send('Internal Server Error');
+    res.status(200).json({Status: false, Message:'Internal Server Error'});
   }
 });
 
 
 
   /////Auth check
-  router.post('/auth-check', authCheck, async (req, res)=>{
+  router.post('/check', authCheck, async (req, res)=>{
     try{
-      if(req.userName){
-      res.status(200).json(req.user_decoted_Data);
+      if(req.userData&&req.userData?.status === "active"){
+        res.status(200).json(req.userData);
       }
       else{
         res.status(500).send('Authorization failed!');

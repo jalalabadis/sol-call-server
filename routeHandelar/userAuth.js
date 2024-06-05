@@ -89,10 +89,7 @@ router.get('/confirm/:token', async (req, res) => {
     // Find user by token
     const tempUser = await TemporaryUser.findOne({ where: { token } });
 
-    if (!tempUser) {
-      res.redirect(`${process.env.EXPRESS_APP_CLIENT}/signup?success=false`);
-    }
-
+    if (tempUser) {
     // Move data to the permanent users table
     await User.create({
       firstName: tempUser.firstName,
@@ -132,6 +129,10 @@ router.get('/confirm/:token', async (req, res) => {
 
     res.redirect(`${process.env.EXPRESS_APP_CLIENT}/login?success=true`);
   }
+  else{
+    res.redirect(`${process.env.EXPRESS_APP_CLIENT}/signup?unsuccess=true`);
+  }
+}
 catch(err){
       console.log(err)
       res.status(500).send('Authorizatsadf');

@@ -3,8 +3,8 @@ dotenv.config();
 const { Sequelize } = require('sequelize');
 
 // Create a new instance of Sequelize
-const sequelize = new Sequelize(process.env.DATABASE_Name, process.env.DATABASE_User, process.env.DATABASE_PASSWORD, {
-  host: process.env.DATABASE_Host,
+const sequelize = new Sequelize('leadcbqt_leadsworker', 'root', '', {
+  host: 'localhost',
   dialect: 'mysql',
   logging: false
 });

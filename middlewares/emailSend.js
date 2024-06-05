@@ -3,19 +3,25 @@ dotenv.config();
 const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_Host,
-    port: process.env.SMTP_PORT, 
-    secure: false, 
+    host: 'mail.leadsworker.com',
+    port: 465,                    
+    secure: true,             
     auth: {
-        user: process.env.SMTP_Email,
-        pass: process.env.SMTP_PASSWORD
-    }
+        user: 'info@leadsworker.com',
+        pass: 'X]64Knej^JXA'
+    },
+    tls: {
+        rejectUnauthorized: false
+    },
+    connectionTimeout: 20000,
+    greetingTimeout: 20000,   
+    socketTimeout: 20000
 });
 
 const sendConfirmationEmail = async (req, token) => {
     const confirmationLink = `${req.protocol}://${req.get('host')}/auth/confirm/${token}`;
     const mailOptions = {
-        from: process.env.SMTP_Email,
+        from: 'info@leadsworker.com',
         to: req.body.email,
         subject: 'Verify email address for leadsworker.com',
         html: `Welcome to Leadsworker! <br>

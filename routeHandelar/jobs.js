@@ -7,6 +7,7 @@ const Notify = require('../models/Notify');
 const authCheck = require('../middlewares/authCheck');
 const Task = require('../models/Task');
 const { Sequelize, Op, DataTypes } = require('sequelize');
+const adminCheck = require('../middlewares/adminCheck');
 
 
 
@@ -17,7 +18,7 @@ router.post('/add', authCheck, async(req, res)=>{
     if(req.userData?.userName){
       const user = await User.findOne({ where: { userName: req.userData?.userName }});
       if(user){
-        const totalJobCost = req.body.workersNeed*req.body.taskCost;
+        const totalJobCost = (req.body.workersNeed*req.body.taskCost)+(req.body.promoteJob?1:0);
         if (totalJobCost>user.reserved) {
           res.status(500).json({Status: false, message:"Amount not found"});
           return;
@@ -38,7 +39,8 @@ router.post('/add', authCheck, async(req, res)=>{
     taskCost:req.body.taskCost,
     ttr:req.body.ttr, 
     pace:req.body.pace, 
-    taskSpread:req.body.taskSpread, 
+    taskSpread:req.body.taskSpread,
+    promote: req.body.promoteJob, 
     ratingType:req.body.ratingType, 
     jobTitle:req.body.jobTitle, 
     jobRequirement:req.body.jobRequirement,
@@ -160,8 +162,9 @@ router.post('/remove', async(req, res)=>{
   });
 
 ////Job Request all For Admin
-router.post('/', async(req, res)=>{
+router.post('/', adminCheck, async(req, res)=>{
     try {
+      if(req.admin){
       const JobData = await Job.findAll({
         include: {
           model: User, 
@@ -169,6 +172,10 @@ router.post('/', async(req, res)=>{
         }
       });
       res.status(200).json(JobData);
+    }
+    else{
+      res.status(500).send('Internal server error');
+    }
     } catch (error) {
       console.error('Failed to retrieve last seen timestamp:', error);
       res.status(500).send('Internal server error');

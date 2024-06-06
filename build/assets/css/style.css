@@ -318,8 +318,9 @@ body {
 }
 @media screen and (max-width: 576px) {
   .pulse {
-    display: none;
+    display: none !important;
   }
+
 }
 @media screen and (min-width: 576px) {
   .pulse-icon {
@@ -1012,11 +1013,14 @@ body {
   text-align: right;
 }
 .site-notice {
-  height: 30px;
+  height: auto;
   background-color: rgba(236, 243, 252);
 }
-
+.resNoticeAlgin{
+ justify-content: end;
+}
 @media screen and (min-width: 992px) {
+ 
   .miaa-miaa,
   .ssp {
     display: none;

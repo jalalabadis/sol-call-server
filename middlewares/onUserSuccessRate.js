@@ -19,7 +19,6 @@ const tasks = await Task.findAll({
 
 const successTask = tasks.filter(item => item.status === "approved");
 const successRate = tasks.length > 0 ? (successTask.length / tasks.length) * 100 : 0;
-console.log(tasks.length, successTask.length)
 
   return successRate;
 }

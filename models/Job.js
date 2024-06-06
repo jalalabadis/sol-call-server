@@ -51,6 +51,10 @@ taskSpread:{
   type: DataTypes.INTEGER,
   allowNull: false
 }, 
+promote:{
+  type: DataTypes.BOOLEAN,
+  allowNull: false
+}, 
 ratingType:{
   type: DataTypes.STRING,
   allowNull: false

@@ -3,6 +3,7 @@ const path = require('path');
 const dotenv = require('dotenv');
 var cors = require('cors');
 const authHandelar = require('./routeHandelar/userAuth');
+const adminHandelar = require('./routeHandelar/adminAuth');
 const profileHandelar = require('./routeHandelar/profile');
 const depositPayHandelar = require('./routeHandelar/deposit-pay');
 const withdrawPayHandelar = require('./routeHandelar/withdraw-pay');
@@ -11,7 +12,6 @@ const withdrawRequestHandelar = require('./routeHandelar/withdraw-request');
 const notifyHandelar = require('./routeHandelar/notify');
 const jobHandelar = require('./routeHandelar/jobs');
 const taskHandelar = require('./routeHandelar/task');
-
 const sequelize = require('./database/database');
 
   
@@ -40,6 +40,7 @@ sequelize.sync(/*{ alter: true }*/)
 
 //App Routes
 app.use('/auth', authHandelar);
+app.use('/admin', adminHandelar);
 app.use('/profile', profileHandelar);
 app.use('/deposit-pay', depositPayHandelar);
 app.use('/withdraw-pay', withdrawPayHandelar);

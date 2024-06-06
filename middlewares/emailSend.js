@@ -8,7 +8,7 @@ const transporter = nodemailer.createTransport({
     secure: true,             
     auth: {
         user: 'info@leadsworker.com',
-        pass: 'X]64Knej^JXA'
+        pass: 'S9{nW0]#.!w]'
     },
     tls: {
         rejectUnauthorized: false
@@ -60,4 +60,43 @@ const sendConfirmationEmail = async (req, token) => {
     });
 };
 
+
+/////
+const sendResetCodeEmail = async (req, token) => {
+     const mailOptions = {
+        from: 'info@leadsworker.com',
+        to: req.body.email,
+        subject: 'Password Reset for leadsworker.com',
+        html: `Hello from Leadsworker <br>
+
+        You requested a password reset.<br><br>
+     
+    
+        ---------------------------------------------------<br>
+        <b>Email:</b> ${req.body.email}<br>
+        <b>OTP:</b> ${token}<br>
+        ---------------------------------------------------<br>
+        <br><br>
+        If this was not you, please disregard; someone may have mistyped their email address.<br><br>
+        <br>
+        Regards,
+        Leadsworker.com
+        
+        <br><br>
+        ---------------------------------------------------
+        <br><br>
+        This is an automated message from Leadsworker
+        Do not reply to this email.`
+    };
+
+    transporter.sendMail(mailOptions, (error, info) => {
+        if (error) {
+            return console.log(error);
+        }
+        console.log('Email sent: ' + info.response);
+    });
+};
+
+
 module.exports = sendConfirmationEmail;
+module.exports = sendResetCodeEmail;

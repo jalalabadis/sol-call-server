@@ -13,6 +13,7 @@ const authCheck = require('../middlewares/authCheck');
 router.post('/add', authCheck, async(req, res)=>{
   try {
     if(req.userData?.userName){
+      if(req.body.amount>=1){
     await DepositRequest.create({
         methodName: req.body.methodName,
         receiverAddress:req.body.receiverAddress,
@@ -23,6 +24,10 @@ router.post('/add', authCheck, async(req, res)=>{
     });
     res.status(200).json("Sucess");
   }
+  else{
+    res.status(500).send('Minimum deposit $1');
+  }
+}
   else{
     res.status(500).send('Internal server error');
   }

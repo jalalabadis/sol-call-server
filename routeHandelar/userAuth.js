@@ -4,13 +4,14 @@ const router = express.Router();
 const User = require('../models/User');
 const TemporaryUser = require('../models/TemporaryUser');
 const authCheck = require('../middlewares/authCheck');
-const emailSend = require('../middlewares/emailSend');
 const generateRandomCode = require('../middlewares/generateVerifyCode');
 const checkValidEmail = require('../middlewares/checkValidEmail');
 const passwordhashing = require('../middlewares/passwordhashing');
 const bcrypt = require('bcrypt');
 const sendConfirmationEmail = require('../middlewares/emailSend');
 const generateSecretKey = require('../middlewares/generateSecretKey');
+const sendResetCodeEmail = require('../middlewares/emailSend');
+const adminCheck = require('../middlewares/adminCheck');
 
 
 
@@ -101,10 +102,11 @@ router.get('/confirm/:token', async (req, res) => {
       country: tempUser.country,
       avatar: "avater.jpg",
       ip: tempUser.ip,
+      proxy: 'no',
       SecretKey: generateSecretKey(),
       ///Condition
       type: "user",
-      status: "active",
+      status: "approved",
       last_seen: new Date(),
       ///affiliate
       referral: tempUser.referral,
@@ -154,7 +156,7 @@ router.post('/login', async (req, res) => {
     const isPasswordValid = await bcrypt.compare(enteredPassword, user.password);
 
     if (isPasswordValid) {
-      if (user.status === "active") {
+      if (user.status === "approved") {
         const userDataObject = {userName:user.userName};
         const token = jwt.sign(userDataObject, process.env.JWT_SECRET, { expiresIn: '7d' });
         res.status(200).json({Status: true, token });
@@ -175,7 +177,7 @@ router.post('/login', async (req, res) => {
   /////Auth check
   router.post('/check', authCheck, async (req, res)=>{
     try{
-      if(req.userData&&req.userData?.status === "active"){
+      if(req.userData&&req.userData?.status === "approved"){
         res.status(200).json(req.userData);
       }
       else{
@@ -190,13 +192,26 @@ router.post('/login', async (req, res) => {
 
 
 //////password resat
-router.post('/password-reset', emailSend, async (req, res)=>{
+router.post('/password-reset',  async (req, res)=>{
   try{
-    res.status(200).send(req.emStatus);
+    const user = await User.findOne({ where: { email: req.body.email }});
+    if(user){
+      const randomCode = generateRandomCode();
+      ///User Update
+      await user.update({
+        otp: randomCode,
+      });
+      await sendResetCodeEmail(req, randomCode);
+      res.status(200).json({Status: true, Message:"Success" });
+    }
+    else{
+      res.status(200).json({Status: false, Message:"Email not found" });
+    }
+    
   }
   catch(err){
     console.log(err)
-    res.status(500).send('Authorizatsadf');
+    res.status(200).json({Status: false, Message:"Server Error" });
   }
   });
 
@@ -204,8 +219,8 @@ router.post('/password-reset', emailSend, async (req, res)=>{
   //////Code verify
 router.post('/verify-code', async (req, res)=>{
   try{
-    const userJsonData = await User.findOne({ email: req.body.email, VerifyCode:req.body.verifyCode});
-        if (userJsonData) {
+    const userJsonData = await User.findOne({ where: { email: req.body.email, otp:req.body.otp}});
+    if (userJsonData) {
     res.status(200).json({Status:true});
         }
       else{
@@ -214,7 +229,7 @@ router.post('/verify-code', async (req, res)=>{
   }
   catch(err){
     console.log(err)
-    res.status(500).send('Authorizatsadf');
+    res.status(200).json({Status: false, Message:"Server Error"});
   }
   });
 
@@ -222,20 +237,17 @@ router.post('/verify-code', async (req, res)=>{
   //////new Pass set
   router.post('/new-password', async (req, res)=>{
     try{
-      const userJsonData = await User.findOne({ email: req.body.email, VerifyCode:req.body.verifyCode});
-  if (userJsonData) {
+      const user = await User.findOne({ where: { email: req.body.email, otp:req.body.otp}});
+  if (user) {
     /// // Username found
-      if(req.body.password.length>=6) {
-            const passwords = await passwordhashing(req.body.password);
+      if(req.body.pass.length>=6) {
+            const passwords = await passwordhashing(req.body.pass);
         ///Pass Up 6 Digit
-            const updateResult = await  User.updateOne({email: req.body.email}, {password: passwords});
-            if(updateResult && updateResult.modifiedCount > 0){
-            ////Update pass to database
-            res.status(200).json({Status:true});
-            }
-          else{
-            res.status(200).json({Status: false, Message:"Server Error"});
-          }
+         ///User Update
+      await user.update({
+        password: passwords,
+      });
+          res.status(200).json({Status:true});
           }
           else{
             res.status(200).json({Status: false, Message:"Password To Short"});
@@ -248,7 +260,7 @@ router.post('/verify-code', async (req, res)=>{
     }
     catch(err){
       console.log(err)
-      res.status(500).send('Authorizatsadf');
+      res.status(200).json({Status: false, Message:"Server Error"});
     }
     });
 
@@ -256,18 +268,12 @@ router.post('/verify-code', async (req, res)=>{
 
   
 /////all_user
-router.post('/all_user', authCheck, async (req, res)=>{
+router.post('/all_user', adminCheck, async (req, res)=>{
   try{
-    if(req.userName){
-      if(req.user_decoted_Data?.type==='admin'){
-        const userData = await User.find();
+    if(req.admin){
+     const userData = await User.findAll();
     res.status(200).json(userData);
       }
-
-      else{
-        res.status(500).send('Authorization failed!');
-      }
-    }
     else{
       res.status(500).send('Authorization failed!');
     }
@@ -290,7 +296,7 @@ router.post('/update-user-data', authCheck, async (req, res)=>{
 const userJsonData = await User.findOne({ _id: req.body.ID});
         if (userJsonData) {
       const updateResult = await  User.updateOne({_id: req.body.ID}, 
-        {status: userJsonData.status==="Active"?"unaAtive":"Active"});
+        {status: userJsonData.status==="approved"?"unaAtive":"approved"});
       if(updateResult && updateResult.modifiedCount > 0){
         const userData = await User.find();
         res.status(200).json(userData);
@@ -322,5 +328,142 @@ const userJsonData = await User.findOne({ _id: req.body.ID});
   }
   });
 
+
+
+  /////////////////////////////////////////////////
+  ////////////////////Profile Edit///////////////
+
+/////Edit Name
+router.post('/edit-name', authCheck, async (req, res)=>{
+  try{
+    if(req.userData?.userName){
+      const user = await User.findOne({ where: { userName: req.userData?.userName }});
+
+         ///User Update
+         await user.update({
+          firstName: req.body.firstName,
+          lastName: req.body.lastName
+        });
+
+        res.status(200).json(user);
+    }
+    else{
+      res.status(200).json({Status: false, Message:"User not found" });
+    }
+  }
+  catch{
+    res.status(500).send('Authorization failed!');
+  }
+  });
+
+  /////Edit Email
+router.post('/edit-email', authCheck, async (req, res)=>{
+  try{
+    const eexistingUserEmail = await User.findOne({ where: { email: req.body.email } });
+    if(req.userData?.userName&&!eexistingUserEmail){
+      const user = await User.findOne({ where: { userName: req.userData?.userName }});
+
+         ///User Update
+         await user.update({
+          email: req.body.email
+        });
+
+        res.status(200).json(user);
+    }
+    else{
+      res.status(200).json({Status: false, Message:"User not found" });
+    }
+  }
+  catch{
+    res.status(500).send('Authorization failed!');
+  }
+  });
+
+
+  /////Pass Change
+router.post('/edit-password', authCheck, async (req, res)=>{
+  try{
+    if(req.userData?.userName){
+     
+      const enteredPassword = req.body.oldPass;
+      const user = await User.findOne({ where: { userName: req.userData?.userName }});
+      if (user) {
+       
+  
+      const isPasswordValid = await bcrypt.compare(enteredPassword, user.password);
+  
+      if (isPasswordValid) {
+        const passwords = await passwordhashing(req.body.newPass);
+        if(req.body.newPass.length>=6) {
+         ///User Update
+         await user.update({
+          password: passwords
+        });
+        res.status(200).json({Status: true});
+      }
+      else{
+        res.status(200).json({Status: false, Message:"Password To Short"});
+      }
+    }
+    else{
+      res.status(200).json({Status: false, Message:"Old Password Wrong" });
+    }
+
+  }
+    else{
+      res.status(200).json({Status: false, Message:"User not found" });
+    }
+  }
+  }
+  catch{
+    res.status(500).send('Authorization failed!');
+  }
+  });
+
+
+   /////Edit Postal Code
+router.post('/edit-postal', authCheck, async (req, res)=>{
+  try{
+    if(req.userData?.userName){
+      const user = await User.findOne({ where: { userName: req.userData?.userName }});
+
+         ///User Update
+         await user.update({
+          postalCode: req.body.postal
+        });
+
+        res.status(200).json(user);
+    }
+    else{
+      res.status(200).json({Status: false, Message:"User not found" });
+    }
+  }
+  catch{
+    res.status(500).send('Authorization failed!');
+  }
+  });
+
+  
+   /////Edit Skill
+router.post('/edit-skills', authCheck, async (req, res)=>{
+  try{
+    if(req.userData?.userName){
+      const user = await User.findOne({ where: { userName: req.userData?.userName }});
+
+         ///User Update
+         await user.update({
+          skills: req.body.skills
+        });
+
+        res.status(200).json(user);
+    }
+    else{
+      res.status(200).json({Status: false, Message:"User not found" });
+    }
+  }
+  catch{
+    res.status(500).send('Authorization failed!');
+  }
+  });
 //Export
 module.exports = router;

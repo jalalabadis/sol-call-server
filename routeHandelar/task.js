@@ -81,8 +81,8 @@ router.post('/add', upload.fields([{ name: 'proof1' }, { name: 'proof2' },
       proof4:req.files.proof4?req.files.proof4[0].filename:req.body.proof4, 
       status: 'pending',
       jobID: req.body.jobID,
-      ip: "01255.5555.3644",
-      country: "Bangladesh",
+      ip: user.ip,
+      country: user.country,
       userName: req.userData?.userName
       
     });

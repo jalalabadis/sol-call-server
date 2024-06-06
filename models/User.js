@@ -29,14 +29,6 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: false
   },
-  country:{
-    type: DataTypes.STRING,
-    allowNull: false
-  },
-  postalCode:{
-    type: DataTypes.STRING,
-    allowNull: true
-  },
   avatar:{
     type: DataTypes.STRING,
     allowNull: false
@@ -52,6 +44,18 @@ const User = sequelize.define('User', {
   ip:{
     type: DataTypes.STRING,
     allowNull: false
+  },
+  country:{
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  proxy:{
+    type: DataTypes.STRING,
+    allowNull: false
+  },
+  postalCode:{
+    type: DataTypes.STRING,
+    allowNull: true
   },
   SecretKey:{
     type: DataTypes.STRING,

@@ -69,6 +69,10 @@ const User = sequelize.define('User', {
     type: DataTypes.BOOLEAN,
     allowNull: true
   },
+  support: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true
+  },
   ////User condition
   type:{
     type: DataTypes.STRING,

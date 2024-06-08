@@ -2,6 +2,8 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
 const User = require('../models/User');
+const DepositRequest = require('../models/DepositRequest');
+const WithdrawRequest = require('../models/WithdrawRequest');
 const TemporaryUser = require('../models/TemporaryUser');
 const authCheck = require('../middlewares/authCheck');
 const emailSend = require('../middlewares/emailSend');
@@ -26,10 +28,33 @@ router.post('/', async(req, res)=>{
     if (!user) {
       return res.status(404).send('User not found');
     }
-    const successRate = await onUserSuccessRate(req.body.profileID);
+
+//////////////////Deposit and Withdraw data//////////////////////////
+    const userApprovedDeposit = await DepositRequest.findAll({where: {userName: req.body.profileID, status: 'approved'}});
+    const userApprovedWithdraw = await WithdrawRequest.findAll({where: {userName: req.body.profileID, status: 'approved'}});
     
+    const depositsWithKey = userApprovedDeposit.map(deposit => ({
+      ...deposit.dataValues,
+      transactionType: 'Deposit'
+    }));
+    
+    const withdrawsWithKey = userApprovedWithdraw.map(withdraw => ({
+      ...withdraw.dataValues,
+      transactionType: 'Withdraw'
+    }));
+    // Combine the data into a single array
+    const activityData = [...depositsWithKey, ...withdrawsWithKey];
+    activityData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    const depositAmount = userApprovedDeposit?.reduce((total, item) => total + parseFloat(item.amount), 0);
+    const withdrawAmount = userApprovedWithdraw?.reduce((total, item) => total + parseFloat(item.amount), 0);
+
+
+    
+    ////Success Rate
+    const successRate = await onUserSuccessRate(req.body.profileID);
+    /////Last Seen
     const lastSeenMessage = getLastSeenMessage(user.last_seen);
-    res.status(200).json({ ...user.toJSON(), last_seen: lastSeenMessage, successRate});
+    res.status(200).json({ ...user.toJSON(), last_seen: lastSeenMessage, successRate, activityData, depositAmount, withdrawAmount});
   } catch (error) {
     console.error('Failed to retrieve last seen timestamp:', error);
     res.status(500).send('Internal server error');

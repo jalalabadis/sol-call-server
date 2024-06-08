@@ -8,10 +8,9 @@ const generateRandomCode = require('../middlewares/generateVerifyCode');
 const checkValidEmail = require('../middlewares/checkValidEmail');
 const passwordhashing = require('../middlewares/passwordhashing');
 const bcrypt = require('bcrypt');
-const sendConfirmationEmail = require('../middlewares/emailSend');
 const generateSecretKey = require('../middlewares/generateSecretKey');
-const sendResetCodeEmail = require('../middlewares/emailSend');
 const adminCheck = require('../middlewares/adminCheck');
+const { sendConfirmationEmail, sendResetCodeEmail } = require('../middlewares/emailSend');
 
 
 
@@ -278,8 +277,9 @@ router.post('/all_user', adminCheck, async (req, res)=>{
       res.status(500).send('Authorization failed!');
     }
   }
-  catch{
-    res.status(500).send('Authorization failed!');
+  catch(err){
+    //console.log(err)
+    res.status(500).send('Server Error!');
   }
   });
 
@@ -456,6 +456,29 @@ router.post('/edit-skills', authCheck, async (req, res)=>{
         });
 
         res.status(200).json(user);
+    }
+    else{
+      res.status(200).json({Status: false, Message:"User not found" });
+    }
+  }
+  catch{
+    res.status(500).send('Authorization failed!');
+  }
+  });
+
+
+    /////Edit Status By Admin
+router.post('/edit-status', adminCheck, async (req, res)=>{
+  try{
+    if(req.admin){
+      const user = await User.findOne({ where: { userName: req.body.userName }});
+
+         ///User Update
+         await user.update({
+          status: req.body.userStatus
+        });
+        const allUser = await User.findAll();
+        res.status(200).json(allUser);
     }
     else{
       res.status(200).json({Status: false, Message:"User not found" });

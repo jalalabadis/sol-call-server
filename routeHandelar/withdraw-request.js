@@ -5,6 +5,8 @@ const WithdrawRequest = require('../models/WithdrawRequest');
 const User = require('../models/User');
 const Notify = require('../models/Notify');
 const authCheck = require('../middlewares/authCheck');
+const AdminNotify = require('../models/AdminNotify');
+const Admin = require('../models/Admin');
 
 
 
@@ -26,6 +28,19 @@ router.post('/add', authCheck, async(req, res)=>{
         status: "pending",
         userName: req.userData?.userName,
     });
+
+     //////Admin Notify add
+     await Admin.update(
+      { notify: true },
+      { where: { notify: false } }
+    );    
+     await AdminNotify.create({
+      seen: true,
+      message:  `New withdraw request by ${req.body.methodName} send ${req.userData?.userName}`,
+      path: '/withdraw-request',
+     });
+
+    
     res.status(200).json("Success");
   }
   else{

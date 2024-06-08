@@ -4,6 +4,7 @@ const path = require('path');
 const DepositRequest = require('../models/DepositRequest');
 const User = require('../models/User');
 const Notify = require('../models/Notify');
+const AdminNotify = require('../models/AdminNotify');
 const authCheck = require('../middlewares/authCheck');
 
 
@@ -22,6 +23,18 @@ router.post('/add', authCheck, async(req, res)=>{
         status: "pending",
         userName: req.userData?.userName,
     });
+
+    //////Admin Notify add
+    await AdminNotify.update(
+      { notify: true },
+      { where: { notify: false } }
+    );    
+    await AdminNotify.create({
+      seen: true,
+      message:  `New deposit request by ${req.body.methodName} send ${req.userData?.userName}`,
+      path: '/deposit-request',
+     });
+
     res.status(200).json("Sucess");
   }
   else{

@@ -55,7 +55,19 @@ router.post('/add', authCheck, async(req, res)=>{
     status: "pending",
     userName: req.userData?.userName
     });
-    res.status(200).json("Sucess");
+
+     //////Admin Notify add
+     await AdminNotify.update(
+      { notify: true },
+      { where: { notify: false } }
+    );    
+     await AdminNotify.create({
+      seen: true,
+      message:  `New Job request by ${req.body.methodName} send ${req.userData?.userName}`,
+      path: '/jobs',
+     });
+
+    res.status(200).json("Success");
   }
     else{
       res.status(500).send('Internal server error');

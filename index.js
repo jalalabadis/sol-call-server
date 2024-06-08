@@ -23,7 +23,6 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 app.use(express.static(path.join(__dirname, 'build')));
-app.use(express.static(path.join(__dirname, 'admin')));
 
 
 
@@ -50,12 +49,6 @@ app.use('/withdraw-request', withdrawRequestHandelar);
 app.use('/notify', notifyHandelar);
 app.use('/job', jobHandelar);
 app.use('/task', taskHandelar);
-// Route for /admins
-app.get('/admins', (req, res) => {
-  res.sendFile(path.join(__dirname, 'admin', 'index.html'));
-});
-
-// Catch-all route for other requests
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });

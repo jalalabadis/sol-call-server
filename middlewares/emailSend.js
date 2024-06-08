@@ -98,5 +98,7 @@ const sendResetCodeEmail = async (req, token) => {
 };
 
 
-module.exports = sendConfirmationEmail;
-module.exports = sendResetCodeEmail;
+module.exports = {
+    sendConfirmationEmail,
+    sendResetCodeEmail
+};

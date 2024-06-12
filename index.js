@@ -12,6 +12,8 @@ const withdrawRequestHandelar = require('./routeHandelar/withdraw-request');
 const notifyHandelar = require('./routeHandelar/notify');
 const jobHandelar = require('./routeHandelar/jobs');
 const taskHandelar = require('./routeHandelar/task');
+const supportHandelar = require('./routeHandelar/support');
+const affiliateHandelar = require('./routeHandelar/affiliate');
 const sequelize = require('./database/database');
 
   
@@ -49,6 +51,8 @@ app.use('/withdraw-request', withdrawRequestHandelar);
 app.use('/notify', notifyHandelar);
 app.use('/job', jobHandelar);
 app.use('/task', taskHandelar);
+app.use('/support', supportHandelar);
+app.use('/affiliate', affiliateHandelar);
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'build', 'index.html'));
 });

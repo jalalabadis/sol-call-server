@@ -1,6 +1,8 @@
 const express = require('express');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
+const path = require('path');
+const multer  = require('multer');
 const User = require('../models/User');
 const DepositRequest = require('../models/DepositRequest');
 const WithdrawRequest = require('../models/WithdrawRequest');
@@ -14,6 +16,45 @@ const bcrypt = require('bcrypt');
 const sendConfirmationEmail = require('../middlewares/emailSend');
 const generateSecretKey = require('../middlewares/generateSecretKey');
 const onUserSuccessRate = require('../middlewares/onUserSuccessRate');
+
+
+
+
+// Set storage configuration
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads');
+  },
+  filename: (req, file, cb) => {
+    const fileExt = path.extname(file.originalname);
+    const fileName = file.originalname
+      .replace(fileExt, "")
+      .toLowerCase()
+      .split(" ")
+      .join("-") + "-" + Date.now();
+    cb(null, fileName + fileExt);
+  }
+});
+
+// File filter to accept only image files
+const fileFilter = (req, file, cb) => {
+  const allowedFileTypes = /jpeg|jpg|png|gif/;
+  const extname = allowedFileTypes.test(path.extname(file.originalname).toLowerCase());
+  const mimetype = allowedFileTypes.test(file.mimetype);
+
+  if (extname && mimetype) {
+    return cb(null, true);
+  } else {
+    cb(new Error('Only images are allowed'));
+  }
+};
+
+// Set upload configuration
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5MB file size limit
+  fileFilter: fileFilter
+});
 
 
 
@@ -63,7 +104,31 @@ router.post('/', async(req, res)=>{
     else{
         res.status(500).send('Authorization failed!');
     }
-})
+});
+
+
+/////Edit User Profile Image
+router.post('/edit-profile-image', upload.single('file'), authCheck, async (req, res)=>{
+      try{
+        if(req.userData?.userName){
+          const user = await User.findOne({ where: { userName: req.userData?.userName }});
+    
+             ///User Update
+             await user.update({
+              avatar: req.file.filename
+            });
+           
+            res.status(200).json(user);
+        }
+        else{
+          res.status(200).json({Status: false, Message:"User not found" });
+        }
+      }
+      catch{
+        res.status(500).send('Authorization failed!');
+      }
+      });
+    
 
 function getLastSeenMessage(lastSeen) {
     const now = new Date();

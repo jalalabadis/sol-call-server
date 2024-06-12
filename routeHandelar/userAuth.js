@@ -11,6 +11,9 @@ const bcrypt = require('bcrypt');
 const generateSecretKey = require('../middlewares/generateSecretKey');
 const adminCheck = require('../middlewares/adminCheck');
 const { sendConfirmationEmail, sendResetCodeEmail } = require('../middlewares/emailSend');
+const DepositRequest = require('../models/DepositRequest');
+const WithdrawRequest = require('../models/WithdrawRequest');
+const Notify = require('../models/Notify');
 
 
 
@@ -488,5 +491,163 @@ router.post('/edit-status', adminCheck, async (req, res)=>{
     res.status(500).send('Authorization failed!');
   }
   });
+
+
+      /////Edit earn Balance By Admin
+router.post('/edit-earn-balance', adminCheck, async (req, res)=>{
+  try{
+    if(req.admin){
+      const user = await User.findOne({ where: { userName: req.body.userName }});
+       if(user){
+
+
+        if(req.body.changeEarn>=user.earned){
+        const changeBalance = req.body.changeEarn-user.earned;
+        ///////User Balance add
+        await user.update({
+          notify: true,
+          earned:  parseFloat(user.earned)+ parseFloat(changeBalance),
+        });
+
+        //////Notify add
+     await Notify.create({
+      seen: true,
+      message: 'Admin add your balance',
+      path: '/deposit',
+      userName: req.body.userName
+     });
+        ///////////
+        await DepositRequest.create({
+          methodName: 'Admin Change',
+          receiverAddress:'earned balance',
+          senderAddress: 'earned balance',
+          amount: changeBalance,
+          status: "approved",
+          userName: req.body.userName,
+      });
+        const allUser = await User.findAll();
+        res.status(200).json(allUser);
+    }
+    else{
+      const changeBalance = user.earned-req.body.changeEarn;
+                ///////
+                await user.update({
+                  notify: true,
+                  earned:  user.earned-changeBalance,
+                });
+        
+                //////Notify add
+             await Notify.create({
+              seen: true,
+              message: 'Admin Reduce your balance',
+              path: '/withdrawal',
+              userName: req.body.userName
+             });
+                ///////////
+                await WithdrawRequest.create({
+                  methodName: 'Admin Change',
+                  receiverAddress:'earned balance',
+                  senderAddress: 'earned balance',
+                  amount: changeBalance,
+                  status: "approved",
+                  userName: req.body.userName,
+              });
+        const allUser = await User.findAll();
+        res.status(200).json(allUser);
+    }
+  }
+ else{
+      res.status(400).json({Status: false, Message:"User not found" });
+    }
+
+  }
+    else{
+      res.status(400).json({Status: false, Message:"Admin not found" });
+    }
+  }
+  catch(err){
+    console.log(err)
+    res.status(500).send('Authorization failed!');
+  }
+  });
+
+
+
+      /////Edit Reserve Balance By Admin
+  router.post('/edit-reserve-balance', adminCheck, async (req, res)=>{
+        try{
+          console.log(req.body.changeReserve, req.body.userName)
+          if(req.admin){
+            const user = await User.findOne({ where: { userName: req.body.userName }});
+             if(user){
+              if(req.body.changeReserve>=user.reserved){
+              const changeBalance = req.body.changeReserve-user.reserved;
+              ///////User Balance add
+              await user.update({
+                notify: true,
+                reserved:  parseFloat(user.reserved)+ parseFloat(changeBalance),
+              });
+      
+              //////Notify add
+           await Notify.create({
+            seen: true,
+            message: 'Admin add your balance',
+            path: '/deposit',
+            userName: req.body.userName
+           });
+              ///////////
+              await DepositRequest.create({
+                methodName: 'Admin Change',
+                receiverAddress:'reserved balance',
+                senderAddress: 'reserved balance',
+                amount: changeBalance,
+                status: "approved",
+                userName: req.body.userName,
+            });
+              const allUser = await User.findAll();
+              res.status(200).json(allUser);
+          }
+          else{
+            const changeBalance = user.reserved-req.body.changeReserve;
+                      ///////
+                      await user.update({
+                        notify: true,
+                        reserved:  user.reserved-changeBalance,
+                      });
+              
+                      //////Notify add
+                   await Notify.create({
+                    seen: true,
+                    message: 'Admin Reduce your balance',
+                    path: '/withdrawal',
+                    userName: req.body.userName
+                   });
+                      ///////////
+                      await WithdrawRequest.create({
+                        methodName: 'Admin Change',
+                        receiverAddress:'reserved balance',
+                        senderAddress: 'reserved balance',
+                        amount: changeBalance,
+                        status: "approved",
+                        userName: req.body.userName,
+                    });
+              const allUser = await User.findAll();
+              res.status(200).json(allUser);
+          }
+        }
+       else{
+            res.status(400).json({Status: false, Message:"User not found" });
+          }
+      
+        }
+          else{
+            res.status(400).json({Status: false, Message:"Admin not found" });
+          }
+        }
+        catch(err){
+          console.log(err)
+          res.status(500).send('Authorization failed!');
+        }
+        });
 //Export
 module.exports = router;

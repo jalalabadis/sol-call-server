@@ -23,7 +23,7 @@ if(req.userData?.userName){
     if (!notifyData) {
       return res.status(404).send('User not found');
     }
-
+    notifyData.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
     res.status(200).json(notifyData);
   } catch (error) {
     console.error('Failed to retrieve last seen timestamp:', error);

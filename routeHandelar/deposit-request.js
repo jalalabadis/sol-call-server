@@ -121,23 +121,36 @@ router.post('/cancel', async(req, res)=>{
   }
 });
 
-  ////Bank remove
-router.post('/remove', async(req, res)=>{
-    try {
-        const depositPayData = await DepositPay.findOne({ where: { id: req.body.id }});
-        if(depositPayData){
-      await depositPayData.destroy();
-      const DepositPayDatas = await DepositPay.findAll();
-      res.status(200).json(DepositPayDatas);
-    }
-    else{
-        res.status(500).send('Internal server error');
-    }
-    } catch (error) {
-      console.error('Failed to retrieve last seen timestamp:', error);
+////Deposit Balance TransFer
+router.post('/move-amount', authCheck, async(req, res)=>{
+  try {
+    if(req.userData?.userName){
+    const user = await User.findOne({ where: { userName: req.userData?.userName }});
+    if(user){
+      if(user.earned>=req.body.moveAmount){
+        ///////
+      await user.update({
+        earned: user.earned-req.body.moveAmount,
+        reserved:  parseFloat(user.reserved)+ parseFloat(req.body.moveAmount),
+      });
+    res.status(200).json(user);
+  }
+  else{
+    res.status(500).send('Your Earned Balance to low');
+}
+  }
+  else{
+    res.status(500).send('Internal server error');
+}
+}
+  else{
       res.status(500).send('Internal server error');
-    }
-  });
+  }
+  } catch (error) {
+    console.error('Failed to retrieve last seen timestamp:', error);
+    res.status(500).send('Internal server error');
+  }
+});
 
 ////Deposit Request all
 router.post('/', async(req, res)=>{
@@ -148,6 +161,7 @@ router.post('/', async(req, res)=>{
           attributes: ['firstName', 'lastName', 'userName', 'email', 'avatar'], // Specify which user attributes to include
         }
       });
+      DepositRequestData.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
       res.status(200).json(DepositRequestData);
     } catch (error) {
       console.error('Failed to retrieve last seen timestamp:', error);
@@ -161,6 +175,7 @@ router.post('/user-transactions', authCheck, async(req, res)=>{
   try {
     if(req.userData?.userName){ 
     const DepositRequestData = await DepositRequest.findAll({ where: { userName: req.userData?.userName }});
+    DepositRequestData.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
     res.status(200).json(DepositRequestData);
   }
   else{

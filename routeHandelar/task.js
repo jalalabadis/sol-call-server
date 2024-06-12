@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const CryptoJS =  require('crypto-js');
 const path = require('path');
 const multer  = require('multer');
 const Job = require('../models/Job');
@@ -7,6 +8,8 @@ const User = require('../models/User');
 const Notify = require('../models/Notify');
 const authCheck = require('../middlewares/authCheck');
 const Task = require('../models/Task');
+const adminCheck = require('../middlewares/adminCheck');
+const { Sequelize, Op, DataTypes } = require('sequelize');
 
 
 // Set storage configuration
@@ -55,7 +58,7 @@ router.post('/add', upload.fields([{ name: 'proof1' }, { name: 'proof2' },
       const completedTasks = await Task.findAll({ where: { userName: req.userData.userName } });
       const completedTaskIds = completedTasks.map(task => task.jobID);
       if(completedTaskIds.includes(parseFloat(req.body.jobID))) {
-        res.status(400).json({ status: false, message: 'Already Done' });
+        res.status(400).send('Already Done');
         }
       else if(!user&&!job&&((job.taskDone-job.taskCancel)>job.workersNeed)){
         res.status(500).send('Job Not found');
@@ -63,6 +66,41 @@ router.post('/add', upload.fields([{ name: 'proof1' }, { name: 'proof2' },
       else if(job.workersNeed<=(job.taskDone-job.taskCancel)){
         res.status(500).send('Job Already Complete');
       }
+    else if(job.ratingType==="system_verify"|| job.ratingType==="system_rate"){
+  const jobRemind = job.workersNeed-(job.taskDone-job.taskCancel);
+  const employer = await User.findOne({ where: { userName: job.userName }});
+  const hash = CryptoJS.SHA256(job.id+user.id+employer.SecretKey);
+   const vcode ='lw-' + hash.toString(CryptoJS.enc.Hex);
+                   /////////////////////////Vcode Verify
+                   if(req.body.proof1===vcode){
+                    await user.update({
+                      pending: job.ratingType==="system_verify"?parseFloat(user.pending)+parseFloat(job.taskCost):user.pending,
+                      earned: job.ratingType==="system_rate"?parseFloat(user.earned)+parseFloat(job.taskCost):user.earned,
+                      tasksDone: user.tasksDone+1
+                    });
+                    await job.update({
+                      taskDone: job.taskDone+1,
+                      status: jobRemind<=1?"completed":job.status
+                    });
+              
+                  await Task.create({
+                    proof1: req.files.proof1?req.files.proof1[0].filename:req.body.proof1, 
+                    proof2:req.files.proof2?req.files.proof2[0].filename:req.body.proof2, 
+                    proof3:req.files.proof3?req.files.proof3[0].filename:req.body.proof3, 
+                    proof4:req.files.proof4?req.files.proof4[0].filename:req.body.proof4, 
+                    status: job.ratingType==="system_rate"?'approved':'pending',
+                    jobID: req.body.jobID,
+                    ip: user.ip,
+                    country: user.country,
+                    userName: req.userData?.userName
+                    
+                  });
+                  res.status(200).json("Success");
+                   }
+                   else{
+                    res.status(500).send('Invalid Vcode');
+                   }
+    }
     else{
       const jobRemind = job.workersNeed-(job.taskDone-job.taskCancel);
       await user.update({
@@ -98,6 +136,48 @@ router.post('/add', upload.fields([{ name: 'proof1' }, { name: 'proof2' },
   }
 });
 
+////Hide Task Submit For Worker
+router.post('/job-hide',  authCheck, async(req, res)=>{
+try {
+if(req.userData?.userName){
+const user = await User.findOne({ where: { userName: req.userData?.userName }});
+const job = await Job.findOne({ where: { id: req.body.jobID, status: "approved"}});
+const completedTasks = await Task.findAll({ where: { userName: req.userData.userName } });
+const completedTaskIds = completedTasks.map(task => task.jobID);
+if(completedTaskIds.includes(parseFloat(req.body.jobID))) {
+res.status(400).json({ status: false, message: 'Already Done' });
+}
+else if(!user&&!job&&((job.taskDone-job.taskCancel)>job.workersNeed)){
+res.status(500).send('Job Not found');
+}
+else if(job.workersNeed<=(job.taskDone-job.taskCancel)){
+res.status(500).send('Job Already Complete');
+}
+else{
+
+await Task.create({
+proof1: 'hide', 
+proof2:'', 
+proof3:'', 
+proof4:'', 
+status: 'hide',
+jobID: req.body.jobID,
+ip: user.ip,
+country: user.country,
+userName: req.userData?.userName
+
+});
+res.status(200).json("Success");
+}
+}
+else{
+res.status(500).send('User Not Found');
+}
+} catch (error) {
+console.error('Failed to retrieve last seen timestamp:', error);
+res.status(500).send('Internal server error');
+}
+});
 
 ////Task approve for Employer
 router.post('/approve', async(req, res)=>{
@@ -246,7 +326,10 @@ router.post('/worker-complete-task', authCheck, async(req, res)=>{
   try {
     if(req.userData?.userName){ 
     const taskData = await Task.findAll(
-      { where: { userName: req.userData?.userName },
+      { where: { 
+        userName: req.userData?.userName, 
+        status: { [Op.ne]: 'hide'} 
+    },
       include: {
         model: Job, 
         attributes: ['targetZone', 'excludeCountry', 'category', 'subCategory', 
@@ -274,7 +357,7 @@ router.post('/job-complete-task', authCheck, async(req, res)=>{
   try {
     if(req.userData?.userName){ 
     const JobData = await Job.findOne({ where: { id: req.body.jobID }});
-     const TaskData = await Task.findAll({ where: { jobID: req.body.jobID }});
+     const TaskData = await Task.findAll({ where: { jobID: req.body.jobID, status: { [Op.ne]: 'hide'}  }});
     res.status(200).json({JobData, TaskData});
   }
   else{
@@ -286,6 +369,26 @@ router.post('/job-complete-task', authCheck, async(req, res)=>{
   }
 });
 
+
+////////////=============Job by Complete Task For Admin================//////////
+router.post('/job-complete-task-admin', adminCheck, async(req, res)=>{
+  try {
+    if(req.admin){ 
+    const JobData = await Job.findOne({ where: { id: req.body.jobID }});
+     const TaskData = await Task.findAll({ where: { jobID: req.body.jobID, status: { [Op.ne]: 'hide'} }, include: {
+      model: User, 
+      attributes: ['firstName', 'lastName', 'userName', 'email', 'avatar'],
+    }});
+    res.status(200).json({JobData, TaskData});
+  }
+  else{
+    res.status(500).send('Internal server error');
+  }
+  } catch (error) {
+    console.error('Failed to retrieve last seen timestamp:', error);
+    res.status(500).send('Internal server error');
+  }
+});
 
 
   //========================================\\

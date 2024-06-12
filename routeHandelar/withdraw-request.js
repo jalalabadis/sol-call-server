@@ -163,6 +163,7 @@ router.post('/', async(req, res)=>{
           attributes: ['firstName', 'lastName', 'userName', 'email', 'avatar'], // Specify which user attributes to include
         }
       });
+      WithdrawRequestData.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
       res.status(200).json(WithdrawRequestData);
     } catch (error) {
       console.error('Failed to retrieve last seen timestamp:', error);
@@ -176,6 +177,7 @@ router.post('/user-transactions', authCheck, async(req, res)=>{
   try {
     if(req.userData?.userName){ 
     const WithdrawRequestData = await WithdrawRequest.findAll({ where: { userName: req.userData?.userName }});
+    WithdrawRequestData.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
     res.status(200).json(WithdrawRequestData);
   }
   else{

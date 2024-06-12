@@ -8,6 +8,8 @@ const authCheck = require('../middlewares/authCheck');
 const Task = require('../models/Task');
 const { Sequelize, Op, DataTypes } = require('sequelize');
 const adminCheck = require('../middlewares/adminCheck');
+const Admin = require('../models/Admin');
+const AdminNotify = require('../models/AdminNotify');
 
 
 
@@ -57,7 +59,7 @@ router.post('/add', authCheck, async(req, res)=>{
     });
 
      //////Admin Notify add
-     await AdminNotify.update(
+     await Admin.update(
       { notify: true },
       { where: { notify: false } }
     );    
@@ -82,8 +84,117 @@ router.post('/add', authCheck, async(req, res)=>{
   }
 });
 
+////Job Edit
+router.post('/edit', authCheck, async(req, res)=>{
+  try {
+    if(req.userData?.userName){
+      const jobData = await Job.findOne({ where: { id: req.body.id }});
+      const user = await User.findOne({ where: { userName: req.userData?.userName }});
+      if(user&&jobData){
+        if(jobData.workersNeed<=req.body.workersNeed){
+        const remindJobCost = (jobData.workersNeed-(jobData.taskDone-jobData.taskCancel))*jobData.taskCost;
+        const newJobCost = (req.body.workersNeed*req.body.taskCost)+(req.body.promoteJob?1:0);
+        const totalJobCost = newJobCost-remindJobCost;
+       
+        if (totalJobCost>user.reserved) {
+          res.status(500).json("Amount not found");
+          return;
+        }
+      await user.update({
+        reserved: user.reserved-totalJobCost,
+      });
+    await jobData.update({
+    targetZone: req.body.targetZone, 
+    excludeCountry:req.body.excludeCountry,
+    category:req.body.selectedCategory, 
+    subCategory:req.body.selectedSubCategory, 
+    workersNeed:req.body.workersNeed, 
+    taskCost:req.body.taskCost,
+    ttr:req.body.ttr, 
+    pace:req.body.pace, 
+    taskSpread:req.body.taskSpread,
+    promote: req.body.promoteJob, 
+    ratingType:req.body.ratingType, 
+    jobTitle:req.body.jobTitle, 
+    jobRequirement:req.body.jobRequirement,
+    proof1:req.body.proof1, 
+    proof1Type:req.body.proof1Type, 
+    proof2:req.body.proof2, 
+    proof2Type:req.body.proof2Type, 
+    proof3:req.body.proof3, 
+    proof3Type:req.body.proof3Type, 
+    proof4:req.body.proof4, 
+    proof4Type:req.body.proof4Type,
+    status: "pending",
+    });
 
-////Job approve
+     //////Admin Notify add
+     await Admin.update(
+      { notify: true },
+      { where: { notify: false } }
+    );    
+     await AdminNotify.create({
+      seen: true,
+      message:  `Edit Job request by ${req.body.id} send ${req.userData?.userName}`,
+      path: '/jobs',
+     });
+
+    res.status(200).json("Success");
+  }
+  else{
+    res.status(500).send(`Minimum workersNeed Incrase 1`);
+  }
+}
+    else{
+      res.status(500).send('Internal server error');
+    }
+  }
+  else{
+    res.status(500).send('Internal server error');
+  }
+  } catch (error) {
+    console.error('Failed to retrieve last seen timestamp:', error);
+    res.status(500).send('Internal server error');
+  }
+});
+
+
+/////increase-worker
+router.post('/increase-worker', authCheck, async(req, res)=>{
+  try {
+    if(req.userData?.userName){
+      const jobData = await Job.findOne({ where: { id: req.body.id }});
+      const user = await User.findOne({ where: { userName: req.userData?.userName }});
+      if(user&&jobData){
+        const totalJobCost =req.body.workersNeed*jobData.taskCost;
+        if (totalJobCost>user.reserved) {
+          res.status(500).json("Amount not found");
+          return;
+        }
+      await user.update({
+        reserved: user.reserved-totalJobCost,
+      });
+    await jobData.update({
+    workersNeed: parseFloat(jobData.workersNeed)+parseFloat(req.body.workersNeed),
+    });
+
+    res.status(200).json("Success");
+}
+    else{
+      res.status(500).send('Internal server error');
+    }
+  }
+  else{
+    res.status(500).send('Internal server error');
+  }
+  } catch (error) {
+    console.error('Failed to retrieve last seen timestamp:', error);
+    res.status(500).send('Internal server error');
+  }
+});
+
+
+////Job approve by admin
 router.post('/approve', async(req, res)=>{
     try {
       const jobData = await Job.findOne({ where: { id: req.body.id }});
@@ -115,7 +226,7 @@ router.post('/approve', async(req, res)=>{
   });
 
 
-////Job Cancel
+////Job Cancel by admin
 router.post('/cancel', async(req, res)=>{
   try {
     const jobData = await Job.findOne({ where: { id: req.body.id }});
@@ -155,23 +266,43 @@ router.post('/cancel', async(req, res)=>{
   }
 });
 
-  ////Bank remove
-router.post('/remove', async(req, res)=>{
-    try {
-        const depositPayData = await DepositPay.findOne({ where: { id: req.body.id }});
-        if(depositPayData){
-      await depositPayData.destroy();
-      const DepositPayDatas = await DepositPay.findAll();
-      res.status(200).json(DepositPayDatas);
-    }
-    else{
-        res.status(500).send('Internal server error');
-    }
-    } catch (error) {
-      console.error('Failed to retrieve last seen timestamp:', error);
+////Job Stop Admin
+router.post('/stop-admin', async(req, res)=>{
+  try {
+    const jobData = await Job.findOne({ where: { id: req.body.id }});
+      if(jobData){
+    const user = await User.findOne({ where: { userName: jobData.userName }});
+    if(user){
+      ///User Update
+      await user.update({
+        notify: true,
+      });
+     //////Notify add
+     await Notify.create({
+      seen: true,
+      message: req.body.reasion,
+      path: '/my-jobs',
+      userName: jobData.userName
+     });
+    /////Deposit pay cancel update
+    await jobData.update({
+      status: "stop-admin",
+    });
+    const jobDatas = await Job.findAll();
+    res.status(200).json(jobDatas);
+  }
+  else{
+    res.status(500).send('Internal server error');
+}
+}
+  else{
       res.status(500).send('Internal server error');
-    }
-  });
+  }
+  } catch (error) {
+    console.error('Failed to retrieve last seen timestamp:', error);
+    res.status(500).send('Internal server error');
+  }
+});
 
 ////Job Request all For Admin
 router.post('/', adminCheck, async(req, res)=>{
@@ -183,6 +314,7 @@ router.post('/', adminCheck, async(req, res)=>{
           attributes: ['firstName', 'lastName', 'userName', 'email', 'avatar'],
         }
       });
+      JobData.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
       res.status(200).json(JobData);
     }
     else{
@@ -205,6 +337,60 @@ router.post('/user-jobs', authCheck, async(req, res)=>{
   else{
     res.status(500).send('Internal server error');
   }
+  } catch (error) {
+    console.error('Failed to retrieve last seen timestamp:', error);
+    res.status(500).send('Internal server error');
+  }
+});
+
+////Job Stop by Employer
+router.post('/stop', authCheck, async(req, res)=>{
+  try {
+if(req.userData?.userName){ 
+    const jobData = await Job.findOne({ where: { id: req.body.id }});
+      if(jobData){
+    /////Deposit pay cancel update
+    await jobData.update({
+      status: "stop",
+    });
+    const JobData = await Job.findOne({ where: { id: req.body.id }});
+    const TaskData = await Task.findAll({ where: { jobID: req.body.id, status: { [Op.ne]: 'hide'}}});
+   res.status(200).json({JobData, TaskData});
+  }
+  else{
+    res.status(500).send('Internal server error');
+}
+}
+else{
+  res.status(500).send('Internal server error');
+}
+  } catch (error) {
+    console.error('Failed to retrieve last seen timestamp:', error);
+    res.status(500).send('Internal server error');
+  }
+});
+
+////Job approved Run by Employer
+router.post('/run', authCheck, async(req, res)=>{
+  try {
+if(req.userData?.userName){ 
+    const jobData = await Job.findOne({ where: { id: req.body.id }});
+      if(jobData&&jobData.status==="stop"){
+    /////Deposit pay cancel update
+    await jobData.update({
+      status: "approved",
+    });
+    const JobData = await Job.findOne({ where: { id: req.body.id }});
+    const TaskData = await Task.findAll({ where: { jobID: req.body.id, status: { [Op.ne]: 'hide'} }});
+   res.status(200).json({JobData, TaskData});
+  }
+  else{
+    res.status(500).send('Internal server error');
+}
+}
+else{
+  res.status(500).send('Internal server error');
+}
   } catch (error) {
     console.error('Failed to retrieve last seen timestamp:', error);
     res.status(500).send('Internal server error');

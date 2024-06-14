@@ -5,6 +5,7 @@ const DepositRequest = require('../models/DepositRequest');
 const User = require('../models/User');
 const Notify = require('../models/Notify');
 const AdminNotify = require('../models/AdminNotify');
+const Admin = require('../models/Admin');
 const authCheck = require('../middlewares/authCheck');
 
 
@@ -25,7 +26,7 @@ router.post('/add', authCheck, async(req, res)=>{
     });
 
     //////Admin Notify add
-    await AdminNotify.update(
+    await Admin.update(
       { notify: true },
       { where: { notify: false } }
     );    
@@ -61,6 +62,19 @@ router.post('/approve', async(req, res)=>{
         await user.update({
           reserved:  parseFloat(user.reserved)+ parseFloat(depositRequestData.amount),
         });
+
+
+      //////affiliate commission sent
+      if(user.referral){
+        const referralUser = await User.findOne({ where: { userName: user.referral }});
+         if(referralUser){
+          const commission = depositRequestData.amount*0.05;
+          await referralUser.update({
+            reward:  parseFloat(referralUser.reward)+ parseFloat(commission),
+          });
+         }
+      };
+
 
       /////Deposit pay approve update
       await depositRequestData.update({

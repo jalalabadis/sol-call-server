@@ -163,7 +163,7 @@ router.post('/login', async (req, res) => {
         const token = jwt.sign(userDataObject, process.env.JWT_SECRET, { expiresIn: '7d' });
         res.status(200).json({Status: true, token });
       } else {
-        res.status(200).json({Status: false, Message:"Your account is inactive"});
+        res.status(200).json({Status: false, Message:"Your account has been blocked by admin"});
       }
     } else {
       res.status(200).json({Status: false, Message:"Incorrect password"});
@@ -289,47 +289,47 @@ router.post('/all_user', adminCheck, async (req, res)=>{
 
 
 /////Update user Data
-router.post('/update-user-data', authCheck, async (req, res)=>{
-  try{
-    if(req.userName){
-      if(req.user_decoted_Data?.type==='admin'){
+// router.post('/update-user-data', authCheck, async (req, res)=>{
+//   try{
+//     if(req.userName){
+//       if(req.user_decoted_Data?.type==='admin'){
         
 
-////////ব্যবহারকারীদের আপডেট করতে হবে
-const userJsonData = await User.findOne({ _id: req.body.ID});
-        if (userJsonData) {
-      const updateResult = await  User.updateOne({_id: req.body.ID}, 
-        {status: userJsonData.status==="approved"?"unaAtive":"approved"});
-      if(updateResult && updateResult.modifiedCount > 0){
-        const userData = await User.find();
-        res.status(200).json(userData);
-      }
-      else{
-        res.status(500).json({Status:  false, Message: "Server Error Try agin"});
-      }
-    }
-    else{
+// ////////ব্যবহারকারীদের আপডেট করতে হবে
+// const userJsonData = await User.findOne({ _id: req.body.ID});
+//         if (userJsonData) {
+//       const updateResult = await  User.updateOne({_id: req.body.ID}, 
+//         {status: userJsonData.status==="approved"?"unaAtive":"approved"});
+//       if(updateResult && updateResult.modifiedCount > 0){
+//         const userData = await User.find();
+//         res.status(200).json(userData);
+//       }
+//       else{
+//         res.status(500).json({Status:  false, Message: "Server Error Try agin"});
+//       }
+//     }
+//     else{
 
-      res.status(500).json({Status:  false, Message: "Server Error Try agin"});
-    }
-
-
+//       res.status(500).json({Status:  false, Message: "Server Error Try agin"});
+//     }
 
 
-      }
 
-      else{
-        res.status(500).send('Authorization failed!');
-      }
-    }
-    else{
-      res.status(500).send('Authorization failed!');
-    }
-  }
-  catch{
-    res.status(500).send('Authorization failed!');
-  }
-  });
+
+//       }
+
+//       else{
+//         res.status(500).send('Authorization failed!');
+//       }
+//     }
+//     else{
+//       res.status(500).send('Authorization failed!');
+//     }
+//   }
+//   catch{
+//     res.status(500).send('Authorization failed!');
+//   }
+//   });
 
 
 

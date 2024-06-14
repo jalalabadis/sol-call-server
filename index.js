@@ -2,6 +2,7 @@ const express = require('express');
 const path = require('path');
 const dotenv = require('dotenv');
 var cors = require('cors');
+const cron = require('node-cron');
 const authHandelar = require('./routeHandelar/userAuth');
 const adminHandelar = require('./routeHandelar/adminAuth');
 const profileHandelar = require('./routeHandelar/profile');
@@ -11,20 +12,42 @@ const depositRequestHandelar = require('./routeHandelar/deposit-request');
 const withdrawRequestHandelar = require('./routeHandelar/withdraw-request');
 const notifyHandelar = require('./routeHandelar/notify');
 const jobHandelar = require('./routeHandelar/jobs');
+const microJobsHandelar = require('./routeHandelar/microJobs');
 const taskHandelar = require('./routeHandelar/task');
 const supportHandelar = require('./routeHandelar/support');
 const affiliateHandelar = require('./routeHandelar/affiliate');
 const sequelize = require('./database/database');
+const checkTasks = require('./AutoMotion/checkTasks');
 
   
+//////////Cross
+const allowedDomains = ['http://localhost:3000'];
+
+const corsOptions = {
+  origin: function (origin, callback) {
+    if (!origin || allowedDomains.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  credentials: true,
+  optionsSuccessStatus: 204
+};
+
 //App initialization
 const PORT = process.env.PORT || 4000;
 const app = express();
+app.use(cors(corsOptions));
 dotenv.config();
-app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 app.use(express.static(path.join(__dirname, 'build')));
+
+
+
+
 
 
 
@@ -38,6 +61,13 @@ sequelize.sync(/*{ alter: true }*/)
   });
 
 
+  //AutoMotion
+cron.schedule('0 */6 * * *', () => {
+  checkTasks();
+  
+  
+});
+
 
 
 //App Routes
@@ -50,6 +80,7 @@ app.use('/deposit-request', depositRequestHandelar);
 app.use('/withdraw-request', withdrawRequestHandelar);
 app.use('/notify', notifyHandelar);
 app.use('/job', jobHandelar);
+app.use('/micro-jobs', microJobsHandelar);
 app.use('/task', taskHandelar);
 app.use('/support', supportHandelar);
 app.use('/affiliate', affiliateHandelar);

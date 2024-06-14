@@ -219,7 +219,7 @@ router.post('/cancel', async(req, res)=>{
     const job = await Job.findOne({ where: { id: taskData.jobID }});
     if(user&&job){
       await user.update({
-        pending: parseFloat(user.earned)-parseFloat(job.taskCost),
+        pending: Math.max(0, parseFloat(user.earned) - parseFloat(job.taskCost)),
         notSatisfied: user.notSatisfied+1,
       });
 

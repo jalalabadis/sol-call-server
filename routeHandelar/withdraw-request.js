@@ -76,6 +76,18 @@ router.post('/approve', async(req, res)=>{
       userName: withdrawRequestData.userName
      });
 
+
+       //////affiliate commission sent
+       if(user.referral){
+        const referralUser = await User.findOne({ where: { userName: user.referral }});
+         if(referralUser){
+          const commission = withdrawRequestData.amount*0.05;
+          await referralUser.update({
+            reward:  parseFloat(referralUser.reward)+ parseFloat(commission),
+          });
+         }
+      };
+
       /////Deposit pay approve update
       await withdrawRequestData.update({
         status: "approved",

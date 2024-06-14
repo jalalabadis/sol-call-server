@@ -167,6 +167,10 @@ router.post('/increase-worker', authCheck, async(req, res)=>{
       const user = await User.findOne({ where: { userName: req.userData?.userName }});
       if(user&&jobData){
         const totalJobCost =req.body.workersNeed*jobData.taskCost;
+        if (req.body.workersNeed<=0) {
+          res.status(500).json("minimum increase 1");
+          return;
+        }
         if (totalJobCost>user.reserved) {
           res.status(500).json("Amount not found");
           return;
@@ -401,55 +405,24 @@ else{
 
 
 ////////////=============Job For Worker================//////////
-router.post('/worker-jobs', authCheck, async(req, res)=>{
+ ////////////////////Single Gob Data send By Edit
+ router.post('/single-job-edit', authCheck, async (req, res) => {
   try {
-    if(req.userData?.userName){ 
-    const completedTasks = await Task.findAll({ where: { userName: req.userData?.userName }});
-    const completedTaskIds = completedTasks.map(task => task.jobID);
-
-    // Find tasks that are not completed by this user
-    const JobData = await Job.findAll({ where: {id: {[Sequelize.Op.notIn]: completedTaskIds}, status: "approved" }});
-    res.status(200).json(JobData);
-    
-  }
-  else{
-    res.status(500).send('Internal server error');
-  }
+    if (req.userData?.userName) {
+        // Find tasks that are not completed by this user
+        const jobData = await Job.findOne({ where: { id: req.body.jobID, userName: req.userData?.userName, status: "approved" } });
+         if(jobData){
+          res.status(200).json(jobData);
+         }
+         else{
+          res.status(500).send('Internal server error');
+            }
+      }
   } catch (error) {
-    console.error('Failed to retrieve last seen timestamp:', error);
+    console.error('Failed to retrieve job data:', error);
     res.status(500).send('Internal server error');
   }
 });
-
-
-  ////Job Request Single by Task Submit page Worker
-  router.post('/single-job', authCheck, async (req, res) => {
-    try {
-      if (req.userData?.userName) {
-        const completedTasks = await Task.findAll({ where: { userName: req.userData.userName } });
-        const completedTaskIds = completedTasks.map(task => task.jobID);
-  
-        if (completedTaskIds.includes(parseFloat(req.body.jobID))) {
-          res.status(400).json('Already Done');
-        } else {
-          // Find tasks that are not completed by this user
-          const jobData = await Job.findOne({ where: { id: req.body.jobID, status: "approved" } });
-           if(jobData){
-            res.status(200).json(jobData);
-           }
-           else{
-            res.status(500).send('Internal server error');
-              }
-        }
-      } else {
-        res.status(500).send('Internal server error');
-      }
-    } catch (error) {
-      console.error('Failed to retrieve job data:', error);
-      res.status(500).send('Internal server error');
-    }
-  });
-  
 
 //Export
 module.exports = router;

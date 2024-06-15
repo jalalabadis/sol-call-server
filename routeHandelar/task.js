@@ -80,7 +80,7 @@ router.post('/add', upload.fields([{ name: 'proof1' }, { name: 'proof2' },
 
     if (["system_verify", "system_rate"].includes(job.ratingType)) {
       const employer = await User.findOne({ where: { userName: job.userName } });
-      const hash = CryptoJS.SHA256(job.id+user.id+employer.SecretKey);
+      const hash = CryptoJS.SHA256(`${job.id}${user.id}${employer.SecretKey}`);
       const vcode = 'lw-' + hash.toString(CryptoJS.enc.Hex);
 
       if (req.body.proof1 !== vcode) {

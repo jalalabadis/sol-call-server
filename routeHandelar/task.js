@@ -170,9 +170,10 @@ res.status(500).send('Internal server error');
 });
 
 ////Task approve for Employer
-router.post('/approve', async(req, res)=>{
+router.post('/approve', authCheck, async(req, res)=>{
     try {
-      const taskData = await Task.findOne({ where: { id: req.body.taskID }});
+      if(req.userData?.userName){
+      const taskData = await Task.findOne({ where: { id: req.body.taskID, status: 'pending' }});
         if(taskData){
       const user = await User.findOne({ where: { userName: taskData.userName }});
       const job = await Job.findOne({ where: { id: taskData.jobID }});
@@ -203,11 +204,67 @@ router.post('/approve', async(req, res)=>{
     else{
         res.status(500).send('Internal server error');
     }
+  }
+  else{
+    res.status(500).send('Internal server error');
+}
     } catch (error) {
       console.error('Failed to retrieve last seen timestamp:', error);
       res.status(500).send('Internal server error');
     }
   });
+
+
+  ////Task Approve multiple for Employer
+router.post('/approve-many', authCheck, async (req, res) => {
+  try {
+      if (req.userData?.userName) {
+          const taskIDs = req.body.selectedTasks;
+          const tasks = await Task.findAll({ where: { id: taskIDs, status: 'pending' } });
+
+          if (tasks && tasks.length > 0) {
+              for (let taskData of tasks) {
+                  const user = await User.findOne({ where: { userName: taskData.userName } });
+                  const job = await Job.findOne({ where: { id: taskData.jobID } });
+
+                  if (user && job) {
+                      await user.update({
+                          earned: parseFloat(user.earned) + parseFloat(job.taskCost),
+                          pending: parseFloat(user.pending) - parseFloat(job.taskCost),
+                          totalEarned: parseFloat(user.totalEarned) + parseFloat(job.taskCost),
+                          satisfied: user.satisfied + 1,
+                      });
+
+                      // Job update
+                      await job.update({
+                          taskPay: job.taskPay + 1,
+                      });
+
+                      // Task update
+                      await taskData.update({
+                          status: 'approved',
+                      });
+                  } else {
+                      return res.status(500).send('Internal server error: User or Job not found');
+                  }
+              }
+
+              const jobID = tasks[0].jobID;
+              const JobData = await Job.findOne({ where: { id: jobID } });
+              const TaskData = await Task.findAll({ where: { jobID } });
+
+              res.status(200).json({ JobData, TaskData });
+          } else {
+              res.status(404).send('Tasks not found');
+          }
+      } else {
+          res.status(401).send('Unauthorized');
+      }
+  } catch (error) {
+      console.error('Failed to approve tasks:', error);
+      res.status(500).send('Internal server error');
+  }
+});
 
 
 ////Task Cancel for employer

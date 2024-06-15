@@ -21,7 +21,7 @@ const checkTasks = require('./AutoMotion/checkTasks');
 
   
 //////////Cross
-const allowedDomains = ['http://localhost:3000'];
+const allowedDomains = ['http://localhost:3000', 'http://localhost:3001'];
 
 const corsOptions = {
   origin: function (origin, callback) {

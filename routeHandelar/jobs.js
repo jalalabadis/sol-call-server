@@ -91,11 +91,11 @@ router.post('/edit', authCheck, async(req, res)=>{
       const jobData = await Job.findOne({ where: { id: req.body.id }});
       const user = await User.findOne({ where: { userName: req.userData?.userName }});
       if(user&&jobData){
-        if(jobData.workersNeed<=req.body.workersNeed){
         const remindJobCost = (jobData.workersNeed-(jobData.taskDone-jobData.taskCancel))*jobData.taskCost;
-        const newJobCost = (req.body.workersNeed*req.body.taskCost)+(req.body.promoteJob?1:0);
-        const totalJobCost = newJobCost-remindJobCost;
-       
+        const newJobCost = (jobData.workersNeed-(jobData.taskDone-jobData.taskCancel))*req.body.taskCost;
+        if(remindJobCost<=newJobCost){
+          const totalJobCost = newJobCost-remindJobCost;
+
         if (totalJobCost>user.reserved) {
           res.status(500).json("Amount not found");
           return;
@@ -108,12 +108,10 @@ router.post('/edit', authCheck, async(req, res)=>{
     excludeCountry:req.body.excludeCountry,
     category:req.body.selectedCategory, 
     subCategory:req.body.selectedSubCategory, 
-    workersNeed:req.body.workersNeed, 
     taskCost:req.body.taskCost,
     ttr:req.body.ttr, 
     pace:req.body.pace, 
     taskSpread:req.body.taskSpread,
-    promote: req.body.promoteJob, 
     ratingType:req.body.ratingType, 
     jobTitle:req.body.jobTitle, 
     jobRequirement:req.body.jobRequirement,
@@ -142,7 +140,7 @@ router.post('/edit', authCheck, async(req, res)=>{
     res.status(200).json("Success");
   }
   else{
-    res.status(500).send(`Minimum workersNeed Incrase 1`);
+    res.status(500).send(`Minimum Task Cost Low`);
   }
 }
     else{

@@ -103,7 +103,10 @@ router.post('/add', upload.fields([{ name: 'proof1' }, { name: 'proof2' },
 
     await job.update({
       taskDone: job.taskDone + 1,
-      status: jobRemind <= 1 ? "completed" : job.status
+      status: jobRemind <= 1 ? "completed" : job.status,
+    },
+    {
+      silent: true
     });
 
     await Task.create({
@@ -187,7 +190,10 @@ router.post('/approve', authCheck, async(req, res)=>{
 
       /////Job update
       await job.update({
-        taskPay: job.taskPay+1,
+        taskPay: job.taskPay+1
+      },
+      {
+        silent: true
       });
       /////Task Update
       await taskData.update({
@@ -237,7 +243,10 @@ router.post('/approve-many', authCheck, async (req, res) => {
 
                       // Job update
                       await job.update({
-                          taskPay: job.taskPay + 1,
+                          taskPay: job.taskPay + 1
+                      },
+                      {
+                        silent: true
                       });
 
                       // Task update
@@ -282,7 +291,10 @@ router.post('/cancel', async(req, res)=>{
 
     /////Job update
     await job.update({
-      taskCancel: job.taskCancel+1,
+      taskCancel: job.taskCancel+1
+    },
+    {
+      silent: true
     });
     /////Task Update
     await taskData.update({
@@ -518,6 +530,9 @@ router.post('/revise-submit',  upload.fields([{ name: 'proof1' }, { name: 'proof
           });
           await job.update({
             taskDone: job.taskDone-1
+          },
+          {
+            silent: true
           });
           await tasks.destroy();
           const taskData = await Task.findAll(

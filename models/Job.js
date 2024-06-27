@@ -61,11 +61,13 @@ ratingType:{
 }, 
 jobTitle:{
   type: DataTypes.STRING,
-  allowNull: false
+  allowNull: false,
+  collate: 'utf8mb4_unicode_520_ci'
 }, 
 jobRequirement:{
-  type: DataTypes.STRING,
-  allowNull: false
+  type: DataTypes.TEXT('long'),
+  allowNull: false,
+  collate: 'utf8mb4_unicode_520_ci'
 },
 proof1:{
   type: DataTypes.STRING,

@@ -131,10 +131,10 @@ router.get('/confirm/:token', async (req, res) => {
     // Delete temporary user
     await tempUser.destroy();
 
-    res.redirect(`${process.env.EXPRESS_APP_CLIENT}/login?success=true`);
+    res.redirect(`/login?success=true`);
   }
   else{
-    res.redirect(`${process.env.EXPRESS_APP_CLIENT}/signup?unsuccess=true`);
+    res.redirect(`/signup?unsuccess=true`);
   }
 }
 catch(err){

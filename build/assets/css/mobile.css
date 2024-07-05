@@ -1,0 +1,109 @@
+@media only screen and (max-width: 600px) {
+    .home-logo .sol-main-img{
+        width: 280px;
+        height: auto;
+        }
+        
+        .home-logo .arrow-img{
+        position: absolute;
+        width: 80px;
+        bottom: 20px;
+        right: 30px;
+        }
+
+
+        .home-logo .call-button{
+            width: 110px;
+            height: 40px;
+            bottom: 20px;
+           left: 50px;
+        font-size: 25px;
+            }
+
+
+
+/* Footer */
+.footer-item img{
+    width: 35px;
+    
+    }
+
+    /* Hader */
+
+
+    .header-item .connect-button{
+        width: 150px;
+        height: 30px;
+    font-size: 18px;
+
+        }
+
+        .amount-item-text{
+            margin: 0 0 10px;
+            font-size: 15px;
+         
+        }
+
+/* Redy page */
+.ready-texts{
+    font-size: 22px;
+}
+
+.item-mosdfy{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 1px;
+}
+
+/* Tutorial Page */
+
+.item-tutorial{
+    display: flex;
+    gap: 12px;
+    flex-direction: column;
+    align-items: flex-start;
+    width: 80%;
+}
+.step {
+    width: auto;
+    font-size: 20px;
+}
+
+
+.step-left {
+    justify-content: flex-start;
+}
+
+.step-right {
+    justify-content: flex-start;
+}
+
+.arrow-1 {
+    display: none;
+}
+
+.arrow-2{
+    display: none;
+}
+
+.arrow-3{
+    display: none;
+}
+
+.button-container button{
+    position: absolute;
+    top: 10px;
+    left: 40%;
+        font-size: 25px;
+    }
+
+/* Play */
+.notice-item-text{
+    bottom:0;
+    right: 50px;
+    ;
+}
+    
+  }

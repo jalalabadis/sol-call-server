@@ -1,0 +1,13 @@
+.adminContent{
+    padding: 50px;
+}
+
+.card-title{
+    font-weight: 900;
+}
+
+.table-title{
+    color: aliceblue;
+    font-size: 25px;
+    font-weight: bold;
+}

@@ -1,12 +1,9 @@
 const express = require('express');
 const router = express.Router();
-const path = require('path');
 const WithdrawRequest = require('../models/WithdrawRequest');
 const User = require('../models/User');
-const Notify = require('../models/Notify');
 const authCheck = require('../middlewares/authCheck');
-const AdminNotify = require('../models/AdminNotify');
-const Admin = require('../models/Admin');
+const getGoodManAmount = require('../middlewares/getGoodManAmount');
 
 
 
@@ -14,34 +11,22 @@ const Admin = require('../models/Admin');
 ////Bank add
 router.post('/add', authCheck, async(req, res)=>{
   try {
-    if(req.userData?.userName){
-      const user = await User.findOne({ where: { userName: req.userData?.userName}});
-      if(user&&req.body.withdrawAmount>=5&&req.body.withdrawAmount<=user.earned){
+    if(req.userData){
+      const user = await User.findOne({ where: { wallet: req.userData.wallet }});
+      if(user){
     await user.update({
-      earned:  user.earned-req.body.withdrawAmount,
+      earned:  0,
         });
 
     await WithdrawRequest.create({
-        methodName: req.body.methodName,
-        senderAddress: req.body.senderAddress,
-        amount: req.body.withdrawAmount,
+        wallet: user.wallet,
+        amount: user.earned,
         status: "pending",
-        userName: req.userData?.userName,
     });
-
-     //////Admin Notify add
-     await Admin.update(
-      { notify: true },
-      { where: { notify: false } }
-    );    
-     await AdminNotify.create({
-      seen: true,
-      message:  `New withdraw request by ${req.body.methodName} send ${req.userData?.userName}`,
-      path: '/withdraw-request',
-     });
-
-    
-    res.status(200).json("Success");
+    const userResponse = user.toJSON();
+        const goodman = await getGoodManAmount(req.userData.wallet);
+        userResponse.goodman = Number(goodman);
+    res.status(200).json({status: true, user: userResponse, amount: req.userData.earned});
   }
   else{
     res.status(500).send('Amount error');
@@ -57,37 +42,11 @@ router.post('/add', authCheck, async(req, res)=>{
 });
 
 
-////Bank approve
+////Bank approve by Admin
 router.post('/approve', async(req, res)=>{
     try {
       const withdrawRequestData = await WithdrawRequest.findOne({ where: { id: req.body.id }});
         if(withdrawRequestData){
-      const user = await User.findOne({ where: { userName: withdrawRequestData.userName }});
-      if(user){
-         ///User Update
-      await user.update({
-        notify: true,
-      });
-     //////Notify add
-     await Notify.create({
-      seen: true,
-      message: "Your Payment Is Pay your Address",
-      path: '/withdrawal',
-      userName: withdrawRequestData.userName
-     });
-
-
-       //////affiliate commission sent
-       if(user.referral){
-        const referralUser = await User.findOne({ where: { userName: user.referral }});
-         if(referralUser){
-          const commission = withdrawRequestData.amount*0.05;
-          await referralUser.update({
-            reward:  parseFloat(referralUser.reward)+ parseFloat(commission),
-          });
-         }
-      };
-
       /////Deposit pay approve update
       await withdrawRequestData.update({
         status: "approved",
@@ -95,10 +54,6 @@ router.post('/approve', async(req, res)=>{
       const WithdrawRequestDatas = await WithdrawRequest.findAll();
       res.status(200).json(WithdrawRequestDatas);
     }
-    else{
-      res.status(500).send('Internal server error');
-  }
-  }
     else{
         res.status(500).send('Internal server error');
     }
@@ -109,25 +64,11 @@ router.post('/approve', async(req, res)=>{
   });
 
 
-////Bank Cancel
+////Bank Cancel by Admin
 router.post('/cancel', async(req, res)=>{
   try {
     const withdrawRequestData = await WithdrawRequest.findOne({ where: { id: req.body.id }});
       if(withdrawRequestData){
-    const user = await User.findOne({ where: { userName: withdrawRequestData.userName }});
-    if(user){
-      ///User Update
-      await user.update({
-        earned: parseFloat(user.earned)+parseFloat(withdrawRequestData.amount),
-        notify: true,
-      });
-     //////Notify add
-     await Notify.create({
-      seen: true,
-      message: req.body.reasion,
-      path: '/withdrawal',
-      userName: withdrawRequestData.userName
-     });
     /////Deposit pay cancel update
     await withdrawRequestData.update({
       status: "cancel",
@@ -135,10 +76,6 @@ router.post('/cancel', async(req, res)=>{
     const WithdrawRequestDatas = await WithdrawRequest.findAll();
     res.status(200).json(WithdrawRequestDatas);
   }
-  else{
-    res.status(500).send('Internal server error');
-}
-}
   else{
       res.status(500).send('Internal server error');
   }
@@ -148,14 +85,14 @@ router.post('/cancel', async(req, res)=>{
   }
 });
 
-  ////Bank remove
-router.post('/remove', async(req, res)=>{
+  ////Withdraw remove
+  router.post('/remove', async(req, res)=>{
     try {
-        const depositPayData = await DepositPay.findOne({ where: { id: req.body.id }});
-        if(depositPayData){
-      await depositPayData.destroy();
-      const DepositPayDatas = await DepositPay.findAll();
-      res.status(200).json(DepositPayDatas);
+        const withdrawRequestData = await WithdrawRequest.findOne({ where: { id: req.body.id }});
+        if(withdrawRequestData){
+      await withdrawRequestData.destroy();
+      const WithdrawRequestDatas = await WithdrawRequest.findAll();
+      res.status(200).json(WithdrawRequestDatas);
     }
     else{
         res.status(500).send('Internal server error');
@@ -172,7 +109,7 @@ router.post('/', async(req, res)=>{
       const WithdrawRequestData = await WithdrawRequest.findAll({
         include: {
           model: User, 
-          attributes: ['firstName', 'lastName', 'userName', 'email', 'avatar'], // Specify which user attributes to include
+          attributes: ['wallet', 'last_play'], // Specify which user attributes to include
         }
       });
       WithdrawRequestData.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
@@ -184,22 +121,6 @@ router.post('/', async(req, res)=>{
   });
 
 
-  ////Deposit Request all by user
-router.post('/user-transactions', authCheck, async(req, res)=>{
-  try {
-    if(req.userData?.userName){ 
-    const WithdrawRequestData = await WithdrawRequest.findAll({ where: { userName: req.userData?.userName }});
-    WithdrawRequestData.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt));
-    res.status(200).json(WithdrawRequestData);
-  }
-  else{
-    res.status(500).send('Internal server error');
-  }
-  } catch (error) {
-    console.error('Failed to retrieve last seen timestamp:', error);
-    res.status(500).send('Internal server error');
-  }
-});
 
 //Export
 module.exports = router;

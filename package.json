@@ -1,5 +1,5 @@
 {
-  "name": "user_control_server",
+  "name": "goodman",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -10,8 +10,12 @@
   "author": "Jalalabadi",
   "license": "ISC",
   "dependencies": {
+    "@solana/spl-token": "^0.4.7",
+    "@solana/web3.js": "^1.94.0",
     "axios": "^1.7.2",
+    "base-x": "^5.0.0",
     "bcrypt": "^5.1.1",
+    "bs58": "^6.0.0",
     "cors": "^2.8.5",
     "crypto-js": "^4.2.0",
     "dotenv": "^16.4.5",
@@ -26,6 +30,7 @@
     "node-cron": "^3.0.3",
     "nodemailer": "^6.9.13",
     "nodemon": "^3.1.0",
-    "sequelize": "^6.37.3"
+    "sequelize": "^6.37.3",
+    "tweetnacl": "^1.0.3"
   }
 }

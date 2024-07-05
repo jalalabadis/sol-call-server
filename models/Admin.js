@@ -18,6 +18,18 @@ const Admin = sequelize.define('Admin', {
   support: {
     type: DataTypes.BOOLEAN,
     allowNull: true
+  },
+  percentage: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  minimum: {
+    type: DataTypes.INTEGER,
+    allowNull: false
+  },
+  maximum: {
+    type: DataTypes.INTEGER,
+    allowNull: false
   }
 
 }, {

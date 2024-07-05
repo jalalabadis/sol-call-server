@@ -2,17 +2,12 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
 const Admin = require('../models/Admin');
-const TemporaryUser = require('../models/TemporaryUser');
-const authCheck = require('../middlewares/authCheck');
-const generateRandomCode = require('../middlewares/generateVerifyCode');
-const checkValidEmail = require('../middlewares/checkValidEmail');
 const passwordhashing = require('../middlewares/passwordhashing');
 const bcrypt = require('bcrypt');
-const sendConfirmationEmail = require('../middlewares/emailSend');
-const generateSecretKey = require('../middlewares/generateSecretKey');
-const sendResetCodeEmail = require('../middlewares/emailSend');
 const adminCheck = require('../middlewares/adminCheck');
-const AdminNotify = require('../models/AdminNotify');
+const dotenv = require('dotenv');
+dotenv.config();
+
 
 
 
@@ -21,13 +16,16 @@ router.post('/', async (req, res)=>{
   try{
   const admin = await Admin.findAll();
   if(admin.length<=0){
-    const passwords = await passwordhashing('tttt');
+    const passwords = await passwordhashing(process.env.ADMIN_PASSWORD);
      //////Admin default add
      await Admin.create({
-      userName: "leadcbqt",
+      userName: "admin",
       password: passwords,
       notify: false,
-      support: false
+      support: false,
+      percentage: 3,
+      minimum: 1000,
+      maximum: 10000
      });
 
      res.status(200).json('Success');
@@ -88,46 +86,53 @@ const adminDataObject = {userName:admin.userName};
     }
     });
 
-//////////////////////////////////////////////////////////////////
-router.post('/notify', adminCheck, async (req, res)=>{
+
+    //////////////////////////////////////////////////////////////////
+router.post('/percentage', adminCheck, async (req, res)=>{
   try{
     if(req.admin){
-      const adminNotify = await AdminNotify.findAll();
-       adminNotify.sort((a,b)=> new Date(b.createdAt) - new Date(a.createdAt))
-      res.status(200).json(adminNotify);
+      const admin = await Admin.findOne({ where: { userName: req.admin?.userName }});
+
+    await  admin.update({
+        percentage: req.body.percentage
+      });
+
+      res.status(200).send('Success');
     }
     else{
       res.status(500).send('Authorization failed!');
     }
   }
-  catch{
-    res.status(500).send('Authorization failed!');
+  catch(err){
+    console.log(err)
+    res.status(500).send('Server Error!');
   }
   });
 
 
-  ////Admin notify mark
-router.post('/mark', adminCheck, async(req, res)=>{
-  if(req.admin){ 
-    try {
+      //////////////////////////////////////////////////////////////////
+router.post('/win-range', adminCheck, async (req, res)=>{
+  try{
+    if(req.admin){
       const admin = await Admin.findOne({ where: { userName: req.admin?.userName }});
-  
-      if (!admin) {
-        return res.status(404).send('User not found');
-      }
-  
-      await admin.update({
-        notify: false,
+
+    await  admin.update({
+        minimum: req.body.minimum,
+        maximum: req.body.maximum
       });
-      res.status(200).json(admin);
-    } catch (error) {
-      console.error('Failed to retrieve last seen timestamp:', error);
-      res.status(500).send('Internal server error');
+
+      res.status(200).send('Success');
     }
-      }
-      else{
-          res.status(500).send('Authorization failed!');
-      }
+    else{
+      res.status(500).send('Authorization failed!');
+    }
+  }
+  catch(err){
+    console.log(err)
+    res.status(500).send('Server Error!');
+  }
   });
+//////////////////////////////////////////////////////////////////
+
 //Export
 module.exports = router;

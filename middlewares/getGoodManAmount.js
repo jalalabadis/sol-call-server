@@ -9,7 +9,7 @@ const getGoodManAmount = async (walletAddress) => {
      const { getAssociatedTokenAddress, getAccount }= await import('@solana/spl-token');
     // Connect to the Solana devnet
     //const connection = new Connection(clusterApiUrl('mainnet-beta'), 'confirmed');
-    const connection = new Connection(clusterApiUrl('devnet'), 'confirmed');
+    const connection = new Connection(clusterApiUrl(process.env.TOKEN_MODE), 'confirmed');
 
     // Fetch the public key objects
     const walletPublicKey = new PublicKey(walletAddress);

@@ -9,7 +9,7 @@ const withdrawRequestHandelar = require('./routeHandelar/withdraw-request');
 const sequelize = require('./database/database');
 
 //////////Cross
-const allowedDomains = ['http://localhost:4000', 'http://localhost:3000'];
+const allowedDomains = ['http://localhost:4000', 'http://localhost:3000', 'https://bettercallsolgoodman.fun'];
 
 const corsOptions = {
   origin: function (origin, callback) {

@@ -6,7 +6,7 @@ const getGoodManAmount = async (walletAddress) => {
   const tokenMintAddress = process.env.TOKEN_MINT;
 
   try {
-     const { getAssociatedTokenAddress, getAccount }= await import('@solana/spl-token');
+     const { getAssociatedTokenAddress, getAccount, getMint }= await import('@solana/spl-token');
     // Connect to the Solana devnet
     //const connection = new Connection(clusterApiUrl('mainnet-beta'), 'confirmed');
     const connection = new Connection(clusterApiUrl(process.env.TOKEN_MODE), 'confirmed');
@@ -21,8 +21,15 @@ const getGoodManAmount = async (walletAddress) => {
   
     // Fetch the token account info
     const tokenAccountInfo = await getAccount(connection, tokenAccountAddress);
+
+    // Fetch the token mint info to get decimals
+    const mintInfo = await getMint(connection, tokenMintPublicKey);
+
+    const decimals = mintInfo.decimals;
+    const rawBalance = tokenAccountInfo.amount.toString();
+    const humanReadableBalance = parseFloat(rawBalance) / Math.pow(10, decimals);
     //console.log(tokenAccountInfo.amount);
-    return tokenAccountInfo.amount;
+    return humanReadableBalance;
   } catch (error) {
     console.error('Error fetching token balance:', error);
     return '0000';

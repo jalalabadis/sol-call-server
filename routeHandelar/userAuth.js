@@ -30,7 +30,7 @@ router.post('/login', async (req, res) => {
           wallet: public_key,
           type: 'player',
           status: 'active',
-          last_play: new Date(),
+          last_play: null,
           earned: 0
         });
         const userDataObject = {wallet: newUser?.wallet};

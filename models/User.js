@@ -19,8 +19,8 @@ const User = sequelize.define('User', {
     allowNull: false
   },
   last_play: {
-    type: DataTypes.DATE,
-    allowNull: false
+    type: DataTypes.INTEGER,
+    allowNull: true
       },
   
   ////Mony
